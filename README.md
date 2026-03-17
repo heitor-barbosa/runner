@@ -12,9 +12,19 @@ Facilitar o acesso à funcionalidade de execução de aplicações Java via linh
 
 1. Permitir que os usuários possam executar aplicações Java sem necessidade de conhecer detalhes de configuração ou instalação do ambiente Java. Em particular, as aplicações que fazem parte do Sistema Runner. 
 
-2. Fornecer uma interface de linha de comandos (CLI) simples e intuitiva para interação com as aplicações Java, permitindo que os usuários possam executar comandos específicos para cada aplicação. Desta forma, ocultando a complexidade de configuração ou facilitando o acesso às funcionalidades sem necessidade de conhecimento técnico aprofundado.
+2. Fornecer uma interface de linha de comandos (CLI) simples e intuitiva para interação com as aplicações Java, permitindo que os usuários possam executar comandos específicos para cada aplicação. Desta forma, **ocultando a complexidade de configuração** ou facilitando o acesso às funcionalidades sem necessidade de conhecimento técnico aprofundado.
 
-
+    ````` bash
+    Execução padronizada de assinatura digital
+    Na prática, o Runner seria usado por alguém que precisa:
+    
+    Gerar uma assinatura digital (simulada)
+    Validar uma assinatura recebida (simulada)
+    Testar fluxos de assinatura antes de integrar com um sistema 
+    
+    Exemplo:
+    Um desenvolvedor ou sistema precisa testar se uma requisição de assinatura está correta antes de enviar para um serviço real.
+    ``````
 ## 4. Requisitos do Sistema Runner
 
 ### US-01: Invocar Assinador via CLI
