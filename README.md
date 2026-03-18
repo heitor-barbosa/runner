@@ -191,6 +191,16 @@ Aplicação Java que valida parâmetros de entrada e simula a criação e valida
 **Saída:**
 - Sucesso: Indicação se a assinatura é válida ou inválida (simulado)
 - Falha: Mensagem de erro indicando o problema
+  
+    ``````bash
+    O Runner também atua como gerenciador de serviço:
+    Inicia o simulador (como se fosse um servidor local)
+    Verifica se é válida (e retorna o resultado)
+    Para o simulador
+    
+    Aplicação:
+    Ambiente de testes onde você precisa subir um sistema auxiliar rapidamente.
+    ``````
 
 ## 5. Requisitos técnicos
 
@@ -199,6 +209,10 @@ Aplicação Java que valida parâmetros de entrada e simula a criação e valida
 **Requisitos funcionais:**
 - RF01: Deve funcionar em Windows, Linux e macOS
 - RF02: Deve fornecer interface via linha de comandos
+  ````bash
+   os comandos devem ocultar a complexidade de configuração/facilitar o acesso às funcionalidades
+  sem necessidade de conhecimento técnico aprofundado.
+  `````
 - RF03: Deve validar entrada do usuário antes de invocar assinador.jar
 - RF04: Deve apresentar resultados de forma legível ao usuário
 - RF05: Deve tratar erros e apresentar mensagens apropriadas
@@ -235,7 +249,7 @@ Usuário → assinatura → assinador.jar → assinatura → Usuário
 4. assinador.jar: valida parâmetros
 5. assinador.jar: retorna assinatura simulada
 6. assinatura: formata resultado
-7. assinatura: apresenta ao usuário
+7. assinatura: apresenta ao usuário de forma clara e legível 
 ```
 
 ### 7.2. Fluxo de Validação de Assinatura
