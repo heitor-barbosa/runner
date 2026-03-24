@@ -27,19 +27,28 @@ Facilitar o acesso à funcionalidade de execução de aplicações Java via linh
     ``````
 ## 4. Requisitos do Sistema Runner
 
-### US-01: Invocar Assinador via CLI
+### US-01: Invocar assinador.jar via CLI
 
 **Como** usuário do Sistema Runner  
 **Quero** executar comandos de assinatura digital através da linha de comandos  
-**Para que** eu possa invocar a aplicação **assinador.jar** (doravante, Assinador) sem conhecer os detalhes técnicos de configuração Java
+**Para que** eu possa invocar a aplicação **assinador.jar** (doravante, Assinador) sem conhecer os detalhes técnicos de configuração Java, tanto para assinar quanto para validar assinaturas digitais.
 
 **Critérios de aceitação:**
 - [ ] O CLI deve aceitar comandos para criação e validação de assinatura
-- [ ] O CLI deve invocar o Assinador com os parâmetros fornecidos
+- [ ] O CLI deve invocar o assinador.jar com os parâmetros fornecidos
+- [ ] O CLI deve permitir a invocação direta do assinador.jar (modo local/CLI)
+- [ ] O CLI deve permitir a invocação do assinador.jar via HTTP (modo servidor)
 - [ ] O CLI deve exibir o resultado da operação de forma legível
+- [ ] O CLI deve iniciar o assinador.jar no modo servidor usando a porta padrão quando não orientado de forma diferente
+- [ ] O CLI deve detectar se instância do assinador.jar já está em execução no modo servidor e usar essa instância, se não orientado de forma diferente. 
+- [ ] O CLI deve fazer uso do assinador.jar no modo servidor quando não orientado para usar o modo local
+- [ ] O CLI deve interromper a execução do assinador.jar na porta padrão ou outra indicada.
+- [ ] O CLI deve permitir a requisição de interrupção programada do assinador.jar após o número de minutos fornecidos sem interação
 
+**Modos de invocação do Assinador:**
+- **Invocação direta ou local (CLI)**: o CLI invoca o assinador.jar diretamente via linha de comandos. Cada execução realiza o ciclo completo de inicialização da JVM e carga da aplicação (*cold start*), sendo adequado para execuções esporádicas ou scripts de automação.
+- **Invocação via HTTP (servidor)**: o assinador.jar é iniciado e permanece em execução, aguardando requisições HTTP. O CLI envia requisições ao assinador.jar neste modo, eliminando o overhead de inicialização nas chamadas subsequentes (*warm start*), oferecendo menor latência e maior throughput para cenários com múltiplas requisições.
 ---
-
 ### US-02: Simular Assinatura Digital com Validação de Parâmetros
 
 **Como** usuário do Sistema Runner  
