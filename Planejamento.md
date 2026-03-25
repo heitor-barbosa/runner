@@ -9,15 +9,15 @@ O CLI não faz o trabalho principal — apenas chama as funções de outras apli
 As responsabilidades do CLI incluem gerenciar o ciclo de vida das aplicações e facilitar seu uso.
 
 Enquanto isso, o assinador.jar:
-- faz assinatura (ou simula)
+- faz assinatura (simula)
 - possivelmente roda como servidor HTTP
 
 # Planejamento da Iteração 1
 
 ## 1. Definir o foco da 1ª iteração
 
-- CLI básico em Go (ex: comando `start`)
-- Subir a aplicação Java (mesmo que fake)
+- CLI básico em Go (comando `start`)
+- Subir a aplicação Java (fake)
 - Implementar o `FakeSignatureService`
 - Criar API `/sign` e `/validate` simples
 
@@ -29,13 +29,13 @@ Enquanto isso, o assinador.jar:
 - Framework: Spring Boot  
 - Endpoint: `POST /sign`  
 - Recebe: string  
-- Retorna: string fake (ex: `"signed-" + mensagem`)  
+- Retorna: string fake 
 
 ---
 
 ## 3. Planejamento da implementação
 
-- Criar projeto Java (Spring Boot)  
+- Criar projeto Java 
 - Criar controller `/sign`  
 - Criar `SignatureService`  
 - Criar `FakeSignatureService`  
