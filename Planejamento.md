@@ -1,3 +1,17 @@
+# Antes da Iteração 1
+## O que estamos construindo?
+Temos essencialmente três coisas:
+
+- Dois CLIs (Command Line Interfaces)
+- Uma aplicação Java (assinador/simulador)
+
+O CLI não faz o trabalho principal — apenas chama as funções de outras aplicações (assinador, hubsaude).
+As responsabilidades do CLI incluem gerenciar o ciclo de vida das aplicações e facilitar seu uso.
+
+Enquanto isso, o assinador.jar:
+- faz assinatura (ou simula)
+- possivelmente roda como servidor HTTP
+
 # Planejamento da Iteração 1
 
 ## 1. Definir o foco da 1ª iteração
