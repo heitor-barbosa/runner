@@ -20,6 +20,8 @@ Enquanto isso, o assinador.jar:
 - Subir a aplicação Java (fake)
 - Implementar o `FakeSignatureService`
 - Criar API `/sign` e `/validate` simples
+  
+**Objetivo: validar o fluxo CLI -> execução do Java -> resposta da API**
 
 ---
 
