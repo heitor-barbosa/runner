@@ -14,57 +14,123 @@ Enquanto isso, o assinador.jar:
 
 # Planejamento da Iteração 1
 
-## 1. Definir o foco da 1ª iteração
+### 1. ENTENDER
 
-- CLI básico em Go (comando `start`)
-- Subir a aplicação Java (fake)
-- Implementar o `FakeSignatureService`
-- Criar API `/sign` e `/validate` simples
-  
-**Objetivo: validar o fluxo CLI -> execução do Java -> resposta da API**
+- Compreender o problema geral
+- Identificar que há um simulador no lugar do dispositivo real
+- Entender o fluxo: CLI → aplicação Java → serviço de assinatura
 
 ---
 
-## 2. Desenvolvendo um design (descrição de como vai funcionar)
+### 2. CÓDIGO / INTEGRAÇÃO
 
-### Java (primeira versão)
-- Framework: Spring Boot  
-- Endpoint: `POST /sign`  
-- Recebe: string  
-- Retorna: string fake 
-
----
-
-## 3. Planejamento da implementação
-
-- Criar projeto Java 
-- Criar controller `/sign`  
-- Criar `SignatureService`  
-- Criar `FakeSignatureService`  
-- Testar endpoint com Postman  
+- Definir classes principais
+  - `SignatureService`
+  - `FakeSignatureService`
+- Planejar como integrar os componentes (CLI ↔ Java)
 
 ---
 
-## 4. Definir testes
+### 3. ENTRADAS / SAÍDAS
 
-- Testar se `/sign` retorna algo  
-- Testar se não quebra com entrada vazia  
-
----
-
-## 5. Definir ambiente
-
-- Código no GitHub  
-- Branches: `main`, `feature/...`  
-- Linguagens: Go (CLI) e Java (backend)  
+- Definir entradas:
+  - mensagem a ser assinada
+- Definir saídas:
+  - mensagem assinada (fake)
+- Avaliar formato:
+  - CLI (flags)
+  - API (JSON)
 
 ---
 
-## 6. Descrever o ciclo da iteração
+### 4. PROTÓTIPO GO
 
-### Iteração 1:
-- Design: API de assinatura fake  
-- Implementação: endpoint `/sign`  
-- Testes: validar resposta  
-- Revisão: código do grupo  
-- Refatoração: ajustes simples  
+- Criar CLI básico em Go
+- Comandos iniciais:
+  - `start`
+  - `stop`
+- Gerenciar execução do processo Java
+
+---
+
+### 5. CLI + PROCESSO
+
+- Iniciar aplicação Java via CLI
+- Monitorar processo (PID)
+- Preparar estrutura para parar o processo
+
+---
+
+### 6. SIMULADOR (CLASSE)
+
+- Criar interface:
+  - `SignatureService`
+- Implementar:
+  - `FakeSignatureService`
+- Métodos:
+  - `sign`
+  - `validate`
+
+---
+
+### 7. API (CONTROLLER)
+
+- Criar `SignatureController`
+- Endpoints:
+  - `/sign`
+  - `/validate`
+
+---
+
+### 8. PORTAS (GO)
+
+- Verificar portas disponíveis
+- Definir porta para aplicação Java
+- Evitar conflitos de execução
+
+---
+
+### 9. PARAR PROCESSO
+
+- Implementar comando para parar aplicação
+- Encerrar processo Java corretamente
+
+---
+
+### 10. DATABASE (LOCAL)
+
+- Definir armazenamento local (ex: `.hubsaude`)
+- Salvar:
+  - porta usada
+  - PID
+  - runtime Java
+
+---
+
+### 11. DOWNLOAD
+
+- Baixar aplicação Java (`.jar`)
+- Permitir opção:
+  - `--source URL`
+- Armazenar localmente
+
+---
+
+### 12. STARTUP
+
+- Fluxo de inicialização:
+  - verificar ambiente
+  - baixar dependências se necessário
+  - iniciar aplicação
+- Otimizar experiência do usuário
+
+---
+
+### 13. CI/CD
+
+- Configurar GitHub Actions
+- Build automático
+- Testes
+- Geração de artefatos (CLI + Java)
+
+--- 
