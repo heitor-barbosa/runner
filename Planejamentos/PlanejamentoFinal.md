@@ -4,7 +4,7 @@
 
 - CLIs serão desenvolvidos em **Go** (1.25), por nativamente lidar com cross-compiling e as funcionalidades exigidas serem bem suportadas pela biblioteca padrão.
 - O **assinador.jar** será desenvolvido em **Java 21**, por restrição de projeto.
-- Estratégia **iterativa e incremental**, organizada em **4 sprints de 1 semana**.
+- Estratégia **iterativa e incremental**, organizada em **4 sprints sequenciais** com datas definidas no cronograma do projeto.
 - Cada sprint entrega valor ao usuário ou remove riscos técnicos relevantes.
 - As histórias abaixo são subdivisões dos épicos US-01 a US-05 da [especificação](../especificacao.md), nomeadas como `US-XX.Y` indicando a história de origem.
 
@@ -21,6 +21,9 @@
 ---
 
 ## Sprint 1 — Fundação e Entrega Contínua
+
+**Período:** 07/04/2026 a 14/04/2026
+**Entrega prevista:** 14/04/2026 (terça-feira)
 
 **Objetivo:** Estabelecer a infraestrutura de desenvolvimento e entrega contínua. Ao final, o primeiro executável do CLI está disponível para download no GitHub Releases.
 
@@ -80,6 +83,9 @@
 ---
 
 ## Sprint 2 — Assinatura Digital Simulada (modo local)
+
+**Período:** 15/04/2026 a 28/04/2026
+**Entrega prevista:** 28/04/2026 (terça-feira)
 
 **Objetivo:** Entregar o fluxo completo ponta-a-ponta: o usuário executa um comando no CLI e obtém uma assinatura simulada ou validação, via invocação local do assinador.jar.
 
@@ -177,6 +183,9 @@
 
 ## Sprint 3 — Modo Servidor e Material Criptográfico
 
+**Período:** 29/04/2026 a 12/05/2026
+**Entrega prevista:** 12/05/2026 (terça-feira)
+
 **Objetivo:** O assinador.jar funciona como servidor HTTP. O CLI gerencia seu ciclo de vida e realiza invocações via HTTP. Suporte a dispositivo criptográfico via PKCS#11 é integrado.
 
 **Valor entregue:** Modo de execução com menor latência disponível. Suporte a token/smart card funcional.
@@ -268,6 +277,9 @@
 
 ## Sprint 4 — Simulador do HubSaúde e Segurança de Artefatos
 
+**Período:** 13/05/2026 a 26/05/2026
+**Entrega prevista:** 26/05/2026 (terça-feira)
+
 **Objetivo:** Gestão completa do Simulador do HubSaúde via CLI. Artefatos distribuídos com checksums e assinatura criptográfica para garantir integridade.
 
 **Valor entregue:** Sistema Runner completo. Todos os casos de uso funcionais. Artefatos verificáveis e seguros.
@@ -327,9 +339,9 @@
 
 ## Resumo de Sprints
 
-| Sprint | Foco | Histórias | Resultado principal |
-|--------|------|-----------|---------------------|
-| 1 | Fundação e Contínua + Segurança Básica | US-01.1, US-05.1, US-05.2, US-05.3 | CLI base + CI/CD + Sign + Releases |
-| 2 | Assinatura Simulada (modo local) | US-02.1, US-02.2, US-02.3, US-01.2, US-01.3, US-01.4, US-04.1 | Fluxo ponta-a-ponta funcional |
-| 3 | Modo Servidor e PKCS#11 | US-02.4, US-02.5, US-01.5, US-01.6, US-01.7, US-01.8, US-01.9 | Servidor HTTP + material criptográfico |
-| 4 | Simulador e Segurança Final | US-03.1, US-03.2, US-03.3, US-03.4 | Sistema e Simulador completos |
+| Sprint | Período | Entrega | Foco | Histórias | Resultado principal |
+|--------|---------|---------|------|-----------|---------------------|
+| 1 | 07/04/2026 a 14/04/2026 | 14/04/2026 | Fundação e Contínua + Segurança Básica | US-01.1, US-05.1, US-05.2, US-05.3 | CLI base + CI/CD + Sign + Releases |
+| 2 | 15/04/2026 a 28/04/2026 | 28/04/2026 | Assinatura Simulada (modo local) | US-02.1, US-02.2, US-02.3, US-01.2, US-01.3, US-01.4, US-04.1 | Fluxo ponta-a-ponta funcional |
+| 3 | 29/04/2026 a 12/05/2026 | 12/05/2026 | Modo Servidor e PKCS#11 | US-02.4, US-02.5, US-01.5, US-01.6, US-01.7, US-01.8, US-01.9 | Servidor HTTP + material criptográfico |
+| 4 | 13/05/2026 a 26/05/2026 | 26/05/2026 | Simulador e Segurança Final | US-03.1, US-03.2, US-03.3, US-03.4 | Sistema e Simulador completos |
