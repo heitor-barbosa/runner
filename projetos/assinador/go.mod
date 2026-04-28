@@ -1,4 +1,4 @@
-module github.com/heitor-barbosa/runner
+module github.com/heitor-barbosa/runner/projetos/assinador/cmd
 
 go 1.21
 
