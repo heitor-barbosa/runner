@@ -98,11 +98,11 @@
 **para que** eu possa testar o fluxo de assinatura sem infraestrutura criptográfica real.
 
 **Critérios de aceitação:**
-- [x] Projeto Java base inicializado no diretório `projetos/assinador-java`
-- [x] Interface `SignatureService` definida com métodos `sign` e `validate`
-- [x] Implementação `FakeSignatureService` retorna assinatura pré-construída para parâmetros válidos
-- [x] Resposta simulada inclui os campos esperados conforme especificação
-- [x] Testes unitários cobrem o cenário de sucesso
+- [ ] Projeto Java base inicializado no diretório `projetos/assinador-java`
+- [ ] Interface `SignatureService` definida com métodos `sign` e `validate`
+- [ ] Implementação `FakeSignatureService` retorna assinatura pré-construída para parâmetros válidos
+- [ ] Resposta simulada inclui os campos esperados conforme especificação
+- [ ] Testes unitários cobrem o cenário de sucesso
 
 ### US-02.2 — Validação de parâmetros de criação de assinatura
 
