@@ -36,7 +36,7 @@
 **para que** o desenvolvimento possa progredir de forma organizada e incremental.
 
 **Critérios de aceitação:**
-- [x] Projeto Go inicializado com `go mod init github.com/kyriosdata/assinatura`
+- [x] Projeto Go inicializado com `go mod init github.com/heitor-barbosa/runner/projetos/assinador`
 - [x] Instalar ferramenta para cli em Go `go install github.com/spf13/cobra-cli@latest`
 - Prompt: acrescente ao projeto que usa o Cobra a opção version, desta forma, quando for executado, deve exibir a versão corrente da aplicação.
 - [x] Estrutura de pacotes definida e documentada
