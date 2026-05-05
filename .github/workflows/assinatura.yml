@@ -1,0 +1,142 @@
+name: Assinatura CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+  pull_request:
+  workflow_dispatch:
+
+env:
+  APP_NAME: assinatura
+  GO_VERSION: "1.25.x"
+  MODULE_DIR: projetos/assinador
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ${{ env.MODULE_DIR }}/go.sum
+
+      - name: Run tests
+        working-directory: ${{ env.MODULE_DIR }}
+        run: go test ./...
+
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            extension: ""
+          - goos: windows
+            goarch: amd64
+            extension: ".exe"
+          - goos: darwin
+            goarch: amd64
+            extension: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ${{ env.MODULE_DIR }}/go.sum
+
+      - name: Build binary
+        working-directory: ${{ env.MODULE_DIR }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          EXTENSION: ${{ matrix.extension }}
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF}" != refs/tags/v* ]]; then
+            version="dev-${GITHUB_SHA::7}"
+          fi
+
+          binary="${APP_NAME}-${version}-${GOOS}-${GOARCH}${EXTENSION}"
+          mkdir -p dist
+
+          CGO_ENABLED=0 go build \
+            -trimpath \
+            -ldflags "-s -w -X github.com/heitor-barbosa/runner/projetos/assinador/cmd.Version=${version}" \
+            -o "dist/${binary}" \
+            .
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ env.MODULE_DIR }}/dist/*
+          if-no-files-found: error
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          set -euo pipefail
+
+          mkdir -p release
+          find artifacts -type f -name "${APP_NAME}-*" -exec cp {} release/ \;
+
+          cd release
+          sha256sum ${APP_NAME}-* > SHA256SUMS.txt
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.2
+
+      - name: Sign binaries with Cosign
+        working-directory: release
+        run: |
+          set -euo pipefail
+
+          for file in ${APP_NAME}-*; do
+            cosign sign-blob --yes \
+              --output-signature "${file}.sig" \
+              --output-certificate "${file}.pem" \
+              "${file}"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
