@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
+	"example.com/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
 

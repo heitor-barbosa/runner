@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
+	"example.com/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -31,16 +31,16 @@ Exemplos:
 
 // flags do comando sign
 var (
-	signBundle         string
-	signProvenance     string
-	signCredType       string
-	signCredContent    string
-	signCredPassword   string
-	signCredAlias      string
-	signCertChain      string
-	signTimestamp      int64
-	signStrategy       string
-	signPolicy         string
+	signBundle       string
+	signProvenance   string
+	signCredType     string
+	signCredContent  string
+	signCredPassword string
+	signCredAlias    string
+	signCertChain    string
+	signTimestamp    int64
+	signStrategy     string
+	signPolicy       string
 )
 
 func init() {
