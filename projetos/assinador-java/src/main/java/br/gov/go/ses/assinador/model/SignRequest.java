@@ -13,9 +13,6 @@ public class SignRequest {
     private String strategy;
     private String policyUri;
 
-    public SignRequest() {
-    }
-
     public String getBundle() {
         return bundle;
     }

@@ -6,9 +6,6 @@ public class ValidateRequest {
     private Long referenceTimestamp;
     private String policyUri;
 
-    public ValidateRequest() {
-    }
-
     public String getSignatureData() {
         return signatureData;
     }

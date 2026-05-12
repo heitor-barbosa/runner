@@ -6,5 +6,6 @@ import br.gov.go.ses.assinador.model.ValidateRequest;
 
 public interface SignatureService {
     AssinadorResponse sign(SignRequest request);
+
     AssinadorResponse validate(ValidateRequest request);
 }
