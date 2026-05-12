@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"example.com/assinador/internal/runner"
+	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +13,7 @@ var signCmd = &cobra.Command{
 	Short: "Cria uma assinatura digital simulada",
 	Long: `Cria uma assinatura digital simulada invocando o assinador.jar localmente via java -jar.
 
-O comando valida todos os parâmetros antes de invocar o assinador.jar.
+O CLI valida as flags obrigatorias e o assinador.jar valida o conteudo recebido.
 Em caso de sucesso, exibe o valor de Signature.data (base64) pronto para uso em FHIR.
 
 Exemplos:

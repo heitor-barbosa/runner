@@ -16,10 +16,17 @@ env:
 
 jobs:
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Go Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
     steps:
       - name: Checkout
@@ -35,10 +42,89 @@ jobs:
         working-directory: ${{ env.MODULE_DIR }}
         run: go test ./...
 
+  java:
+    name: Java Tests and Jar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Test and package assinador.jar
+        working-directory: projetos/assinador-java
+        run: mvn --batch-mode clean verify
+
+      - name: Upload assinador.jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: assinador-jar
+          path: projetos/assinador-java/target/assinador.jar
+          if-no-files-found: error
+
+  integration:
+    name: CLI to Jar Integration
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - java
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: ${{ env.MODULE_DIR }}/go.sum
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Download assinador.jar
+        uses: actions/download-artifact@v4
+        with:
+          name: assinador-jar
+          path: ${{ env.MODULE_DIR }}
+
+      - name: Exercise sign and validate locally
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          set -euo pipefail
+
+          timestamp="$(date +%s)"
+          sign_output="$(go run . sign \
+            --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+            --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+            --credential-content 'test-key' \
+            --certificate-chain '["cert1","cert2"]' \
+            --timestamp "${timestamp}")"
+
+          signature_data="$(printf '%s\n' "${sign_output}" | tail -n 1)"
+          test -n "${signature_data}"
+
+          go run . validate \
+            --signature-data "${signature_data}" \
+            --timestamp "${timestamp}"
+
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
-    needs: test
+    needs: integration
     permissions:
       contents: read
 

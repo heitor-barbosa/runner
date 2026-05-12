@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"example.com/assinador/internal/jdk"
+	"github.com/heitor-barbosa/runner/projetos/assinador/internal/jdk"
 )
 
 // Response representa a resposta JSON do assinador.jar.

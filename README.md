@@ -70,32 +70,44 @@ Resposta (assinatura ou validação)
 
 ---
 
-## 5. Funcionalidades Planejadas
+## 5. Estado Atual
 
-- Execução de comandos `sign` e `validate`
-- Execução em modo local e HTTP
-- Gerenciamento de processos (start/stop/status)
+Até a Sprint 2, o projeto já entrega:
+
+- CLI `assinatura` com comandos `version`, `sign` e `validate`
+- `assinador.jar` em Java 21 com simulação de assinatura e validação
+- Invocação local do Java via `java -jar`
+- Validação de parâmetros e mensagens de erro estruturadas
+- Detecção/provisionamento automático de JDK 21
+- Testes Go, testes Java e integração CLI → JAR no CI
+
+Ficam para as próximas sprints:
+
+- Execução em modo servidor HTTP
+- Gerenciamento de processos (`start`, `stop`, `status`)
 - Detecção automática de instância ativa
 - Timeout automático por inatividade
-- Download automático de dependências
-- Persistência de configuração local (`~/.hubsaude`)
-- Distribuição multiplataforma
+- Integração com material criptográfico e simulador dedicado
 
 ---
 
-## 6. Como Usar (Em Desenvolvimento)
+## 6. Como Usar
 
-As instruções de instalação e uso serão adicionadas conforme o avanço do projeto.
+O fluxo local da Sprint 2 está documentado em `projetos/assinador/README.md` e em `Planejamentos/StatusSprint2.md`.
 
-Exemplo futuro esperado:
+Resumo do uso:
 
 ```bash
-assinatura sign --message "dados"
-assinatura validate --message "dados" --signature "abc123"
-assinatura start
-assinatura stop
-simulador start
-simulador status
+assinatura sign \
+  --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+  --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+  --credential-content 'test-key' \
+  --certificate-chain '["cert1","cert2"]' \
+  --timestamp <timestamp-atual>
+
+assinatura validate \
+  --signature-data '<valor-base64>' \
+  --timestamp <mesmo-timestamp-usado-no-sign>
 ```
 ## 7. Contexto Acadêmico
 

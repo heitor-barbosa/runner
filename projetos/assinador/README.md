@@ -1,17 +1,23 @@
 # Assinatura CLI
 
-CLI em Go do Sistema Runner. Nesta sprint, este modulo entrega a base do comando `assinatura`, o comando de versao e o pipeline de build/release multiplataforma.
+CLI em Go do Sistema Runner. A partir da Sprint 2, este modulo tambem executa o fluxo local de assinatura e validacao simuladas invocando o `assinador.jar`.
 
 ## Estrutura
 
 - `main.go`: ponto de entrada da aplicacao.
 - `cmd/root.go`: comando raiz `assinatura`.
+- `cmd/sign.go`: comando `assinatura sign`.
+- `cmd/validate.go`: comando `assinatura validate`.
 - `cmd/version.go`: comando `assinatura version` e variavel de versao usada no build.
+- `internal/jdk`: deteccao e provisionamento automatico do JDK 21.
+- `internal/runner`: invocacao local do `assinador.jar`.
 - `.github/workflows/assinatura.yml`: workflow de CI/CD mantido na raiz do repositorio.
 
 ## Requisitos
 
 - Go 1.25 ou superior.
+- Java/JDK 21, detectado automaticamente ou provisionado pelo CLI.
+- `assinador.jar` em um dos locais lidos pelo runner.
 
 ## Uso local
 
@@ -22,6 +28,8 @@ cd projetos/assinador
 go run . --help
 go run . version
 go run . --version
+go run . sign --help
+go run . validate --help
 ```
 
 Saida esperada do comando de versao em desenvolvimento:
@@ -42,6 +50,51 @@ Para gerar um binario local:
 go build -o assinatura .
 ```
 
+## Fluxo local com o `assinador.jar`
+
+O runner procura o jar:
+
+- ao lado do executavel `assinatura`;
+- em `~/.hubsaude/assinador.jar`;
+- no diretorio atual.
+
+Com o jar disponivel, um fluxo de assinatura pode ser executado assim:
+
+```bash
+timestamp="$(date +%s)"
+
+go run . sign \
+  --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+  --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+  --credential-content 'test-key' \
+  --certificate-chain '["cert1","cert2"]' \
+  --timestamp "${timestamp}"
+```
+
+Depois, use o valor impresso em `Signature.data (base64)`:
+
+```bash
+go run . validate \
+  --signature-data '<valor-base64>' \
+  --timestamp "${timestamp}"
+```
+
+No Windows PowerShell, para preservar as aspas do JSON inline, gere o binario e use `--%`:
+
+```powershell
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$timestamp
+
+go build -o assinatura.exe .
+.\assinatura.exe --% sign --bundle "{\"resourceType\":\"Bundle\",\"entry\":[{}]}" --provenance "{\"resourceType\":\"Provenance\",\"target\":[{\"reference\":\"urn:uuid:abc\"}]}" --credential-content test-key --certificate-chain "[\"cert1\",\"cert2\"]" --timestamp <cole-aqui-o-timestamp-exibido>
+```
+
+Depois:
+
+```powershell
+.\assinatura.exe --% validate --signature-data <valor-base64> --timestamp <mesmo-timestamp-usado-no-sign>
+```
+
 ## CI/CD
 
 O workflow `.github/workflows/assinatura.yml` executa automaticamente em:
@@ -51,7 +104,7 @@ O workflow `.github/workflows/assinatura.yml` executa automaticamente em:
 - tags SemVer no formato `v*.*.*`;
 - execucao manual por `workflow_dispatch`.
 
-Em cada execucao, o workflow roda os testes e gera binarios para:
+Em cada execucao, o workflow roda os testes Go, valida o modulo Java, empacota o `assinador.jar`, executa um teste de integracao local e gera binarios para:
 
 - `linux/amd64`;
 - `windows/amd64`;

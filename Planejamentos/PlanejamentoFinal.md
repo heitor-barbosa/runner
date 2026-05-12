@@ -98,11 +98,11 @@
 **para que** eu possa testar o fluxo de assinatura sem infraestrutura criptográfica real.
 
 **Critérios de aceitação:**
-- [ ] Projeto Java base inicializado no diretório `projetos/assinador-java`
-- [ ] Interface `SignatureService` definida com métodos `sign` e `validate`
-- [ ] Implementação `FakeSignatureService` retorna assinatura pré-construída para parâmetros válidos
-- [ ] Resposta simulada inclui os campos esperados conforme especificação
-- [ ] Testes unitários cobrem o cenário de sucesso
+- [x] Projeto Java base inicializado no diretório `projetos/assinador-java`
+- [x] Interface `SignatureService` definida com métodos `sign` e `validate`
+- [x] Implementação `FakeSignatureService` retorna assinatura pré-construída para parâmetros válidos
+- [x] Resposta simulada inclui os campos esperados conforme especificação
+- [x] Testes unitários cobrem o cenário de sucesso
 
 ### US-02.2 — Validação de parâmetros de criação de assinatura
 
@@ -111,10 +111,10 @@
 **para que** eu receba feedback imediato e claro sobre erros antes da operação ser processada.
 
 **Critérios de aceitação:**
-- [ ] Todos os parâmetros obrigatórios são verificados (presença e formato)
-- [ ] Mensagens de erro indicam qual parâmetro está inválido e o motivo
-- [ ] Parâmetros inválidos são rejeitados antes de qualquer processamento
-- [ ] Testes unitários cobrem todos os cenários de validação
+- [x] Todos os parâmetros obrigatórios são verificados (presença e formato)
+- [x] Mensagens de erro indicam qual parâmetro está inválido e o motivo
+- [x] Parâmetros inválidos são rejeitados antes de qualquer processamento
+- [x] Testes unitários cobrem todos os cenários de validação
 
 ### US-02.3 — Simulação e validação de parâmetros de validação de assinatura
 
@@ -123,10 +123,10 @@
 **para que** eu possa testar o fluxo de validação com feedback claro sobre parâmetros incorretos.
 
 **Critérios de aceitação:**
-- [ ] Parâmetros de validação são verificados (presença e formato)
-- [ ] Resultado pré-determinado (válido/inválido) retornado baseado em critérios simples
-- [ ] Mensagens de erro claras para parâmetros inválidos
-- [ ] Testes unitários cobrem cenários de sucesso e falha
+- [x] Parâmetros de validação são verificados (presença e formato)
+- [x] Resultado pré-determinado (válido/inválido) retornado baseado em critérios simples
+- [x] Mensagens de erro claras para parâmetros inválidos
+- [x] Testes unitários cobrem cenários de sucesso e falha
 
 ### US-01.2 — Parsing de comandos e parâmetros no CLI
 
@@ -135,11 +135,11 @@
 **para que** eu possa solicitar operações de assinatura de forma intuitiva.
 
 **Critérios de aceitação:**
-- [ ] CLI aceita o comando `sign` com os parâmetros necessários
-- [ ] CLI aceita o comando `validate` com os parâmetros necessários
-- [ ] Mensagem de ajuda (`--help`) documenta os comandos e parâmetros disponíveis
-- [ ] Parâmetros ausentes ou inválidos geram mensagem de erro orientativa
-- [ ] Testes cobrem o parsing de comandos e parâmetros
+- [x] CLI aceita o comando `sign` com os parâmetros necessários
+- [x] CLI aceita o comando `validate` com os parâmetros necessários
+- [x] Mensagem de ajuda (`--help`) documenta os comandos e parâmetros disponíveis
+- [x] Parâmetros ausentes ou inválidos geram mensagem de erro orientativa
+- [x] Testes cobrem o parsing de comandos e parâmetros
 
 ### US-01.3 — Invocação do assinador.jar no modo local
 
@@ -148,11 +148,11 @@
 **para que** eu possa criar e validar assinaturas sem executar comandos Java manualmente.
 
 **Critérios de aceitação:**
-- [ ] CLI localiza o `java` disponível (provisionado ou do sistema)
-- [ ] CLI constrói e executa o comando `java -jar assinador.jar` com parâmetros corretamente mapeados
-- [ ] Saída do assinador.jar é capturada e repassada ao usuário
-- [ ] Erros de execução (ex.: JDK ausente, jar não encontrado) são tratados com mensagens claras
-- [ ] Testes de integração validam o fluxo CLI → assinador.jar
+- [x] CLI localiza o `java` disponível (provisionado ou do sistema)
+- [x] CLI constrói e executa o comando `java -jar assinador.jar` com parâmetros corretamente mapeados
+- [x] Saída do assinador.jar é capturada e repassada ao usuário
+- [x] Erros de execução (ex.: JDK ausente, jar não encontrado) são tratados com mensagens claras
+- [x] Testes de integração validam o fluxo CLI → assinador.jar
 
 ### US-01.4 — Exibição legível de resultados
 
@@ -161,10 +161,10 @@
 **para que** eu compreenda facilmente o resultado da assinatura ou validação.
 
 **Critérios de aceitação:**
-- [ ] Resultado de criação de assinatura é formatado de forma legível
-- [ ] Resultado de validação de assinatura indica claramente se é válida ou inválida
-- [ ] Erros são apresentados com mensagem descritiva e orientação para correção
-- [ ] Saída é adequada para uso em terminal (não requer pós-processamento)
+- [x] Resultado de criação de assinatura é formatado de forma legível
+- [x] Resultado de validação de assinatura indica claramente se é válida ou inválida
+- [x] Erros são apresentados com mensagem descritiva e orientação para correção
+- [x] Saída é adequada para uso em terminal (não requer pós-processamento)
 
 ### US-04.1 — Detecção e provisionamento automático do JDK
 
@@ -173,11 +173,11 @@
 **para que** eu possa utilizar o Assinador sem instalar o Java manualmente.
 
 **Critérios de aceitação:**
-- [ ] Sistema verifica se JDK 21 está disponível no `PATH` ou em diretório gerenciado (`~/.hubsaude/`)
-- [ ] Se ausente, JDK é baixado automaticamente da distribuição adequada para a plataforma (Windows, Linux, macOS)
-- [ ] JDK baixado é armazenado em `~/.hubsaude/jdk/` para reuso
-- [ ] Download não é repetido se JDK já estiver provisionado
-- [ ] Testes cobrem detecção de JDK presente e ausente nas três plataformas
+- [x] Sistema verifica se JDK 21 está disponível no `PATH` ou em diretório gerenciado (`~/.hubsaude/`)
+- [x] Se ausente, JDK é baixado automaticamente da distribuição adequada para a plataforma (Windows, Linux, macOS)
+- [x] JDK baixado é armazenado em `~/.hubsaude/jdk/` para reuso
+- [x] Download não é repetido se JDK já estiver provisionado
+- [x] Testes cobrem detecção de JDK presente e ausente nas três plataformas
 
 ---
 

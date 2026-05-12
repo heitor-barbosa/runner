@@ -1,92 +1,113 @@
 # Status da Sprint 2
 
-## Sprint 2 Finalizada
+## Situacao
 
-O arquivo `cmd/jdk.go` foi removido pois não era parte do planejamento da Sprint 2 (não há comandos manuais no escopo).
+A Sprint 2 entrega o fluxo local completo:
 
-### Status da Sprint 2:
+- `assinador.jar` em Java 21 com `sign` e `validate`;
+- validacao rigorosa de parametros no Java;
+- CLI Go com comandos `assinatura sign` e `assinatura validate`;
+- invocacao local via `java -jar assinador.jar`;
+- deteccao de JDK 21 e provisionamento automatico quando necessario;
+- testes Go, testes Java e teste de integracao no GitHub Actions.
 
-✅ **US-02.1** — Simulação de criação de assinatura digital  
-✅ **US-02.2** — Validação de parâmetros de criação de assinatura  
-✅ **US-02.3** — Validação de parâmetros de validação de assinatura  
-✅ **US-01.2** — Parsing de comandos e parâmetros no CLI  
-✅ **US-01.3** — Invocação do assinador.jar no modo local  
-✅ **US-01.4** — Exibição legível de resultados  
-✅ **US-04.1** — Detecção e provisionamento automático do JDK  
+## Como validar localmente
 
-### O que foi implementado:
+### 1. Testar e empacotar o Java
 
-- **CLI Go**: Comandos `sign` e `validate` funcionais
-- **Assinador Java**: Simulação completa com validações rigorosas
-- **Provisionamento JDK**: Download automático do JDK 21 (Temurin) quando necessário
-- **Integração**: O runner detecta Java automaticamente e instala se ausente
+No modulo Java:
 
-### Para testar:
-
-1. Construa o `assinador.jar` com Maven: `mvn package` (instale Maven se necessário)
-2. Coloque o jar em `~/.hubsaude/assinador.jar` ou no diretório do executável
-3. Execute `assinatura sign --bundle '{"resourceType":"Bundle"}' --provenance '{"resourceType":"Provenance"}' --credential-content "test" --certificate-chain '["cert"]' --timestamp 1751328001`
-
-O provisionamento automático do JDK será acionado se Java não estiver disponível no sistema.
-
-## Comandos para Teste
-
-### 1. Construir o executável Go
-```bash
-cd projetos/assinador
-go build -o assinatura.exe
-```
-
-### 2. Instalar Maven (se necessário)
-```bash
-# Opção 1: Usando Chocolatey (recomendado)
-choco install maven -y
-
-# Opção 2: Download manual
-mkdir C:\temp
-cd C:\temp
-Invoke-WebRequest -Uri "https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.zip" -OutFile "maven.zip"
-Expand-Archive -Path "maven.zip" -DestinationPath "C:\maven"
-# Adicionar C:\maven\apache-maven-3.9.6\bin ao PATH
-```
-
-### 3. Construir o projeto Java
 ```bash
 cd projetos/assinador-java
-mvn clean package
+mvn clean verify
 ```
 
-### 4. Copiar o JAR para o local esperado
+O jar executavel esperado sera:
+
+```text
+target/assinador.jar
+```
+
+### 2. Disponibilizar o jar para o CLI
+
+Copie o arquivo para um local lido pelo runner:
+
 ```bash
-# Copiar para o diretório do executável
-copy target\assinador-1.0-SNAPSHOT.jar ..\assinador\assinador.jar
-
-# OU copiar para o diretório global
-copy target\assinador-1.0-SNAPSHOT.jar %USERPROFILE%\.hubsaude\assinador.jar
+cp target/assinador.jar ../assinador/assinador.jar
 ```
 
-### 5. Testar o comando sign
+No Windows PowerShell:
+
+```powershell
+Copy-Item target\assinador.jar ..\assinador\assinador.jar
+```
+
+### 3. Testar o CLI Go
+
 ```bash
-cd projetos/assinador
-.\assinatura.exe sign ^
-  --bundle "{\"resourceType\":\"Bundle\",\"entry\":[]}" ^
-  --provenance "{\"resourceType\":\"Provenance\",\"target\":[]}" ^
-  --credential-content "test-key-content" ^
-  --certificate-chain "[\"base64-cert1\",\"base64-cert2\"]" ^
-  --timestamp 1751328001
+cd ../assinador
+go test ./...
 ```
 
-### 6. Testar o comando validate
+### 4. Assinar localmente
+
+Use um timestamp atual para respeitar a janela de tolerancia do validador:
+
 ```bash
-.\assinatura.exe validate ^
-  --signature "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..." ^
-  --certificate-chain "[\"base64-cert1\",\"base64-cert2\"]" ^
-  --timestamp 1751328001
+timestamp="$(date +%s)"
+
+go run . sign \
+  --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+  --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+  --credential-content 'test-key' \
+  --certificate-chain '["cert1","cert2"]' \
+  --timestamp "${timestamp}"
 ```
 
-### 7. Verificar provisionamento automático do JDK
-```bash
-# Remover Java do PATH temporariamente para testar
-# O sistema deve baixar e instalar automaticamente
-.\assinatura.exe sign --bundle "{}" --provenance "{}" --credential-content "test" --certificate-chain "[]" --timestamp 1751328001
+No Windows PowerShell:
+
+```powershell
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+$timestamp
+
+go build -o assinatura.exe .
+.\assinatura.exe --% sign --bundle "{\"resourceType\":\"Bundle\",\"entry\":[{}]}" --provenance "{\"resourceType\":\"Provenance\",\"target\":[{\"reference\":\"urn:uuid:abc\"}]}" --credential-content test-key --certificate-chain "[\"cert1\",\"cert2\"]" --timestamp <cole-aqui-o-timestamp-exibido>
 ```
+
+### 5. Validar a assinatura
+
+Copie o valor exibido em `Signature.data (base64)` e execute:
+
+```bash
+go run . validate \
+  --signature-data '<valor-base64>' \
+  --timestamp "${timestamp}"
+```
+
+No Windows PowerShell:
+
+```powershell
+.\assinatura.exe --% validate --signature-data <valor-base64> --timestamp <mesmo-timestamp-usado-no-sign>
+```
+
+No PowerShell, `--%` impede que as aspas internas do JSON sejam reescritas pelo shell antes de chegarem ao executavel.
+
+## Provisionamento automatico do JDK
+
+O CLI tenta usar, nesta ordem:
+
+1. JDK 21 no `PATH`;
+2. JDK 21 em `JAVA_HOME`;
+3. JDK 21 provisionado em `~/.hubsaude/jdk/`.
+
+Se nenhum estiver disponivel, o runner baixa um Temurin JDK 21 compativel com a plataforma e salva em `~/.hubsaude/jdk/`. Instalacoes locais validas sao reutilizadas.
+
+## Validacao automatica no CI
+
+O workflow `.github/workflows/assinatura.yml` executa:
+
+- `go test ./...` em Windows, Linux e macOS;
+- `mvn clean verify`;
+- empacotamento de `assinador.jar`;
+- teste de integracao `assinatura sign` seguido de `assinatura validate`;
+- builds multiplataforma do CLI.

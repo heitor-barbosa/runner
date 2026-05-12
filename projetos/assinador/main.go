@@ -1,6 +1,6 @@
 package main
 
-import "example.com/assinador/cmd"
+import "github.com/heitor-barbosa/runner/projetos/assinador/cmd"
 
 func main() {
 	cmd.Execute()
