@@ -36,10 +36,21 @@ func invoke(command string, payload map[string]interface{}) (*Response, error) {
 	// 1. Localiza java
 	javaPath, err := jdk.FindJava()
 	if err != nil {
-		return nil, fmt.Errorf(
-			"java não encontrado. Execute 'assinatura jdk install' para provisionar o JDK automaticamente.\nDetalhe: %w",
-			err,
-		)
+		if installErr := jdk.InstallJDK(); installErr != nil {
+			return nil, fmt.Errorf(
+				"java não encontrado e instalação automática do JDK falhou: %v\nDetalhe: %w",
+				installErr,
+				err,
+			)
+		}
+
+		javaPath, err = jdk.FindJava()
+		if err != nil {
+			return nil, fmt.Errorf(
+				"java não encontrado após instalação automática do JDK: %w",
+				err,
+			)
+		}
 	}
 
 	// 2. Localiza assinador.jar
