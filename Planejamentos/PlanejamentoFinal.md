@@ -197,10 +197,10 @@
 **para que** o CLI possa invocá-lo via requisições HTTP no modo servidor.
 
 **Critérios de aceitação:**
-- [ ] `SignatureController` implementado com endpoints `POST /sign` e `POST /validate`
-- [ ] Endpoints reutilizam a mesma lógica de validação e simulação do modo CLI
-- [ ] Respostas HTTP seguem estrutura consistente (sucesso e erro)
-- [ ] Testes de integração validam os endpoints
+- [x] `SignatureController` implementado com endpoints `POST /sign` e `POST /validate`
+- [x] Endpoints reutilizam a mesma lógica de validação e simulação do modo CLI
+- [x] Respostas HTTP seguem estrutura consistente (sucesso e erro)
+- [x] Testes de integração validam os endpoints
 
 ### US-02.5 — Integração com dispositivo criptográfico via PKCS#11
 

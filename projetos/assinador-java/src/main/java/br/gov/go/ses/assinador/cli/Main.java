@@ -3,6 +3,8 @@ package br.gov.go.ses.assinador.cli;
 import br.gov.go.ses.assinador.model.AssinadorResponse;
 import br.gov.go.ses.assinador.model.SignRequest;
 import br.gov.go.ses.assinador.model.ValidateRequest;
+import br.gov.go.ses.assinador.http.AssinadorHttpServer;
+import br.gov.go.ses.assinador.http.HttpServerMain;
 import br.gov.go.ses.assinador.service.FakeSignatureService;
 import br.gov.go.ses.assinador.service.SignatureService;
 import br.gov.go.ses.assinador.validation.SignRequestValidator;
@@ -26,6 +28,12 @@ public class Main {
         }
 
         String command = args[0].toLowerCase();
+
+        if ("server".equals(command)) {
+            new HttpServerMain().startAndBlock(extractPort(args));
+            return;
+        }
+
         String json = extractJson(args);
 
         if (json == null || json.isBlank()) {
@@ -39,7 +47,7 @@ public class Main {
             default -> {
                 printError(
                         "CONFIG.INVALID-PARAMETER",
-                        "Comando desconhecido: '" + command + "'. Use 'sign' ou 'validate'."
+                "Comando desconhecido: '" + command + "'. Use 'sign', 'validate' ou 'server'."
                 );
                 System.exit(1);
             }
@@ -117,7 +125,26 @@ public class Main {
                 Uso:
                   java -jar assinador.jar sign     --json '<SignRequest JSON>'
                   java -jar assinador.jar validate --json '<ValidateRequest JSON>'
+                  java -jar assinador.jar server   --port 8080
                 """);
+    }
+
+    private static int extractPort(String[] args) {
+        for (int index = 1; index < args.length - 1; index++) {
+            if ("--port".equals(args[index])) {
+                try {
+                    int port = Integer.parseInt(args[index + 1]);
+                    if (port < 0 || port > 65535) {
+                        throw new NumberFormatException("porta fora do intervalo");
+                    }
+                    return port;
+                } catch (NumberFormatException error) {
+                    printError("CONFIG.INVALID-PARAMETER", "Porta invalida: " + args[index + 1]);
+                    System.exit(1);
+                }
+            }
+        }
+        return AssinadorHttpServer.DEFAULT_PORT;
     }
 
     private static String extractJson(String[] args) {
