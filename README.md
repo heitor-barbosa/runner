@@ -109,6 +109,9 @@ assinatura validate \
   --signature-data '<valor-base64>' \
   --timestamp <mesmo-timestamp-usado-no-sign>
 ```
+
+Para uso via release, o usuario precisa baixar o binario `assinatura` da sua plataforma
+e o arquivo `assinador.jar`, mantendo ambos na mesma pasta.
 ## 7. Contexto Acadêmico
 
 | Campo | Informação |

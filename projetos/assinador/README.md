@@ -58,6 +58,9 @@ O runner procura o jar:
 - em `~/.hubsaude/assinador.jar`;
 - no diretorio atual.
 
+Nas releases, o uso esperado e baixar `assinatura-<versao>-<os>-<arch>` e `assinador.jar`,
+colocando ambos na mesma pasta antes de executar o CLI.
+
 Com o jar disponivel, um fluxo de assinatura pode ser executado assim:
 
 ```bash
@@ -131,6 +134,7 @@ git push origin v0.1.0
 Ao receber a tag, o workflow cria uma GitHub Release com:
 
 - binarios multiplataforma;
+- `assinador.jar`;
 - `SHA256SUMS.txt`;
 - arquivos `.sig` gerados pelo Cosign;
 - arquivos `.pem` gerados pelo Cosign.
