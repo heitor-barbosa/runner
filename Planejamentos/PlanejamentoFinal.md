@@ -274,6 +274,14 @@
 - [ ] Mecanismo de timeout é documentado no help do CLI
 
 ---
+**Ordem de Implementação**
+- US-02.4: Endpoints HTTP do assinador.jar
+- US-01.5 + US-01.7: assinatura start, registro de PID/porta e detecção de instância ativa.
+- US-01.6: sign e validate usando HTTP quando servidor estiver ativo.
+- US-01.8: assinatura stop.
+- US-01.9: timeout por inatividade.
+- US-02.5: PKCS#11, porque é a parte mais incerta e pode ser tratada como integração/simulação controlada.
+---
 
 ## Sprint 4 — Simulador do HubSaúde e Segurança de Artefatos
 
