@@ -30,6 +30,7 @@ go run . version
 go run . --version
 go run . sign --help
 go run . validate --help
+go run . start --help
 ```
 
 Saida esperada do comando de versao em desenvolvimento:
@@ -97,6 +98,18 @@ Depois:
 ```powershell
 .\assinatura.exe --% validate --signature-data <valor-base64> --timestamp <mesmo-timestamp-usado-no-sign>
 ```
+
+## Modo servidor HTTP
+
+A partir da Sprint 3, o CLI pode iniciar o `assinador.jar` em modo servidor:
+
+```bash
+go run . start --port 8080
+```
+
+O comando registra PID, porta, caminho do Java e caminho do JAR em `~/.hubsaude/`.
+Se uma instancia ja estiver respondendo em `/health` na porta informada, o CLI reutiliza
+essa instancia e nao inicia outro processo.
 
 ## CI/CD
 

@@ -110,6 +110,22 @@ class SignatureControllerTest {
         assertEquals("HTTP.METHOD-NOT-ALLOWED", body.get("errorCode").asText());
     }
 
+    @Test
+    void healthShouldReturnSuccessResponse() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/health"))
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode body = mapper.readTree(response.body());
+
+        assertEquals(200, response.statusCode());
+        assertTrue(body.get("success").asBoolean());
+        assertEquals("HEALTH.OK", body.get("data").asText());
+    }
+
     private HttpResponse<String> post(String path, Object payload) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + path))

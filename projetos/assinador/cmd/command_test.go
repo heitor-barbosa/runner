@@ -22,3 +22,9 @@ func TestSignAndValidateCommandsAreRegistered(t *testing.T) {
 		t.Fatalf("validate command not registered: %v", err)
 	}
 }
+
+func TestStartCommandIsRegistered(t *testing.T) {
+	if _, _, err := rootCmd.Find([]string{"start"}); err != nil {
+		t.Fatalf("start command not registered: %v", err)
+	}
+}

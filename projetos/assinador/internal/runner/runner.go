@@ -2,14 +2,20 @@ package runner
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/heitor-barbosa/runner/projetos/assinador/internal/jdk"
 )
+
+const defaultServerPort = 8080
 
 // Response representa a resposta JSON do assinador.jar.
 type Response struct {
@@ -19,53 +25,96 @@ type Response struct {
 	ErrorMessage string `json:"errorMessage"`
 }
 
-// InvokeSign invoca o assinador.jar no modo local para criação de assinatura.
-// Constrói o payload JSON, localiza java e assinador.jar, executa e retorna a resposta.
+// ServerState representa uma instancia do assinador.jar iniciada pelo CLI.
+type ServerState struct {
+	PID       int       `json:"pid"`
+	Port      int       `json:"port"`
+	JavaPath  string    `json:"javaPath"`
+	JarPath   string    `json:"jarPath"`
+	StartedAt time.Time `json:"startedAt"`
+	Reused    bool      `json:"-"`
+}
+
+// InvokeSign invoca o assinador.jar no modo local para criacao de assinatura.
 func InvokeSign(payload map[string]interface{}) (*Response, error) {
 	return invoke("sign", payload)
 }
 
-// InvokeValidate invoca o assinador.jar no modo local para validação de assinatura.
+// InvokeValidate invoca o assinador.jar no modo local para validacao de assinatura.
 func InvokeValidate(payload map[string]interface{}) (*Response, error) {
 	return invoke("validate", payload)
 }
 
-// ── internos ──────────────────────────────────────────────────────────────────
+// StartServer inicia o assinador.jar em modo servidor, ou reutiliza a instancia ativa na porta.
+func StartServer(port int) (*ServerState, error) {
+	port = normalizePort(port)
 
-func invoke(command string, payload map[string]interface{}) (*Response, error) {
-	// 1. Localiza java
-	javaPath, err := jdk.FindJava()
-	if err != nil {
-		if installErr := jdk.InstallJDK(); installErr != nil {
-			return nil, fmt.Errorf(
-				"java não encontrado e instalação automática do JDK falhou: %v\nDetalhe: %w",
-				installErr,
-				err,
-			)
-		}
-
-		javaPath, err = jdk.FindJava()
-		if err != nil {
-			return nil, fmt.Errorf(
-				"java não encontrado após instalação automática do JDK: %w",
-				err,
-			)
-		}
+	if state, err := readServerState(port); err == nil && isServerActive(port) {
+		state.Reused = true
+		return state, nil
 	}
 
-	// 2. Localiza assinador.jar
+	if isServerActive(port) {
+		return &ServerState{Port: port, Reused: true}, nil
+	}
+
+	javaPath, err := findJava()
+	if err != nil {
+		return nil, err
+	}
+
 	jarPath, err := findJar()
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Serializa o payload para JSON
-	jsonBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("erro ao serializar parâmetros: %w", err)
+	cmd := exec.Command(javaPath, "-jar", jarPath, "server", "--port", strconv.Itoa(port)) //nolint:gosec
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("falha ao iniciar assinador.jar em modo servidor: %w", err)
 	}
 
-	// 4. Monta e executa o comando: java -jar assinador.jar <command> --json '<payload>'
+	state := &ServerState{
+		PID:       cmd.Process.Pid,
+		Port:      port,
+		JavaPath:  javaPath,
+		JarPath:   jarPath,
+		StartedAt: time.Now().UTC(),
+	}
+
+	if err := writeServerState(state); err != nil {
+		_ = cmd.Process.Kill()
+		return nil, err
+	}
+
+	if err := waitForServer(port, 10*time.Second); err != nil {
+		_ = cmd.Process.Kill()
+		_ = removeServerState(port)
+		return nil, err
+	}
+
+	_ = cmd.Process.Release()
+	return state, nil
+}
+
+func invoke(command string, payload map[string]interface{}) (*Response, error) {
+	javaPath, err := findJava()
+	if err != nil {
+		return nil, err
+	}
+
+	jarPath, err := findJar()
+	if err != nil {
+		return nil, err
+	}
+
+	jsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao serializar parametros: %w", err)
+	}
+
 	args := []string{"-jar", jarPath, command, "--json", string(jsonBytes)}
 	cmd := exec.Command(javaPath, args...) //nolint:gosec
 
@@ -74,34 +123,56 @@ func invoke(command string, payload map[string]interface{}) (*Response, error) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		// Verifica se há saída de erro do assinador.jar (pode conter JSON de erro)
 		if stdout.Len() > 0 {
 			return parseResponse(stdout.Bytes())
 		}
 		return nil, fmt.Errorf(
-			"falha ao executar assinador.jar: %w\nSaída de erro: %s",
-			err, stderr.String(),
+			"falha ao executar assinador.jar: %w\nSaida de erro: %s",
+			err,
+			stderr.String(),
 		)
 	}
 
 	return parseResponse(stdout.Bytes())
 }
 
+func findJava() (string, error) {
+	javaPath, err := jdk.FindJava()
+	if err == nil {
+		return javaPath, nil
+	}
+
+	if installErr := jdk.InstallJDK(); installErr != nil {
+		return "", fmt.Errorf(
+			"java nao encontrado e instalacao automatica do JDK falhou: %v\nDetalhe: %w",
+			installErr,
+			err,
+		)
+	}
+
+	javaPath, err = jdk.FindJava()
+	if err != nil {
+		return "", fmt.Errorf("java nao encontrado apos instalacao automatica do JDK: %w", err)
+	}
+	return javaPath, nil
+}
+
 func parseResponse(data []byte) (*Response, error) {
 	var resp Response
 	if err := json.Unmarshal(bytes.TrimSpace(data), &resp); err != nil {
 		return nil, fmt.Errorf(
-			"resposta do assinador.jar não é JSON válido: %w\nSaída recebida: %s",
-			err, string(data),
+			"resposta do assinador.jar nao e JSON valido: %w\nSaida recebida: %s",
+			err,
+			string(data),
 		)
 	}
 	return &resp, nil
 }
 
-// findJar procura o assinador.jar nas localizações esperadas:
-// 1. Mesmo diretório do executável assinatura
+// findJar procura o assinador.jar nas localizacoes esperadas:
+// 1. Mesmo diretorio do executavel assinatura
 // 2. ~/.hubsaude/
-// 3. Diretório atual
+// 3. Diretorio atual
 func findJar() (string, error) {
 	candidates := jarCandidates()
 	for _, path := range candidates {
@@ -110,7 +181,7 @@ func findJar() (string, error) {
 		}
 	}
 	return "", fmt.Errorf(
-		"assinador.jar não encontrado. Localizações verificadas:\n%s\n\nColoque o assinador.jar em um dos diretórios acima.",
+		"assinador.jar nao encontrado. Localizacoes verificadas:\n%s\n\nColoque o assinador.jar em um dos diretorios acima.",
 		formatCandidates(candidates),
 	)
 }
@@ -118,17 +189,14 @@ func findJar() (string, error) {
 func jarCandidates() []string {
 	var candidates []string
 
-	// 1. Diretório do executável
 	if exe, err := os.Executable(); err == nil {
 		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "assinador.jar"))
 	}
 
-	// 2. ~/.hubsaude/
 	if home, err := os.UserHomeDir(); err == nil {
 		candidates = append(candidates, filepath.Join(home, ".hubsaude", "assinador.jar"))
 	}
 
-	// 3. Diretório atual
 	if wd, err := os.Getwd(); err == nil {
 		candidates = append(candidates, filepath.Join(wd, "assinador.jar"))
 	}
@@ -144,4 +212,96 @@ func formatCandidates(paths []string) string {
 		sb.WriteString("\n")
 	}
 	return sb.String()
+}
+
+func normalizePort(port int) int {
+	if port <= 0 {
+		return defaultServerPort
+	}
+	return port
+}
+
+func waitForServer(port int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if isServerActive(port) {
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return fmt.Errorf("assinador.jar nao respondeu em http://127.0.0.1:%d/health em %s", port, timeout)
+}
+
+func isServerActive(port int) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	defer cancel()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/health", normalizePort(port))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
+func readServerState(port int) (*ServerState, error) {
+	data, err := os.ReadFile(serverStatePath(port))
+	if err != nil {
+		return nil, err
+	}
+
+	var state ServerState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+func writeServerState(state *ServerState) error {
+	dir, err := hubSaudeDir()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("falha ao criar diretorio de estado: %w", err)
+	}
+
+	data, err := json.MarshalIndent(state, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(serverStatePath(state.Port), data, 0o600); err != nil {
+		return fmt.Errorf("falha ao gravar estado do servidor: %w", err)
+	}
+	return nil
+}
+
+func removeServerState(port int) error {
+	err := os.Remove(serverStatePath(port))
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func serverStatePath(port int) string {
+	dir, err := hubSaudeDir()
+	if err != nil {
+		return filepath.Join(".hubsaude", fmt.Sprintf("assinador-server-%d.json", normalizePort(port)))
+	}
+	return filepath.Join(dir, fmt.Sprintf("assinador-server-%d.json", normalizePort(port)))
+}
+
+func hubSaudeDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("nao foi possivel determinar o diretorio home do usuario: %w", err)
+	}
+	return filepath.Join(home, ".hubsaude"), nil
 }

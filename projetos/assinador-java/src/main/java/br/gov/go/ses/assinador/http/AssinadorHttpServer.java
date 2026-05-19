@@ -1,12 +1,15 @@
 package br.gov.go.ses.assinador.http;
 
+import br.gov.go.ses.assinador.model.AssinadorResponse;
 import br.gov.go.ses.assinador.service.FakeSignatureService;
 import br.gov.go.ses.assinador.service.SignatureService;
 import br.gov.go.ses.assinador.validation.SignRequestValidator;
 import br.gov.go.ses.assinador.validation.ValidateRequestValidator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,6 +17,7 @@ import java.util.concurrent.Executors;
 public class AssinadorHttpServer implements AutoCloseable {
 
     public static final int DEFAULT_PORT = 8080;
+    private static final String CONTENT_TYPE_JSON = "application/json; charset=utf-8";
 
     private final HttpServer server;
     private final ExecutorService executor;
@@ -35,6 +39,28 @@ public class AssinadorHttpServer implements AutoCloseable {
 
         server.createContext("/sign", controller::handleSign);
         server.createContext("/validate", controller::handleValidate);
+        server.createContext("/health", exchange -> {
+            if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().add("Allow", "GET");
+                byte[] error = new ObjectMapper().writeValueAsBytes(AssinadorResponse.error(
+                        "HTTP.METHOD-NOT-ALLOWED",
+                        "Metodo nao permitido. Use GET."
+                ));
+                exchange.getResponseHeaders().set("Content-Type", CONTENT_TYPE_JSON);
+                exchange.sendResponseHeaders(405, error.length);
+                try (OutputStream output = exchange.getResponseBody()) {
+                    output.write(error);
+                }
+                return;
+            }
+
+            byte[] payload = new ObjectMapper().writeValueAsBytes(AssinadorResponse.ok("HEALTH.OK"));
+            exchange.getResponseHeaders().set("Content-Type", CONTENT_TYPE_JSON);
+            exchange.sendResponseHeaders(200, payload.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(payload);
+            }
+        });
         server.setExecutor(executor);
 
         return new AssinadorHttpServer(server, executor);

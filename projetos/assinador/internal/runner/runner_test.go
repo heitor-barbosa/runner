@@ -27,3 +27,12 @@ func TestParseResponseRejectsInvalidJSON(t *testing.T) {
 		t.Fatal("expected invalid JSON to be rejected")
 	}
 }
+
+func TestNormalizePortUsesDefaultWhenUnset(t *testing.T) {
+	if got := normalizePort(0); got != defaultServerPort {
+		t.Fatalf("normalizePort(0) = %d, want %d", got, defaultServerPort)
+	}
+	if got := normalizePort(9090); got != 9090 {
+		t.Fatalf("normalizePort(9090) = %d, want 9090", got)
+	}
+}
