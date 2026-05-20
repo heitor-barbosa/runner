@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -124,6 +125,73 @@ func TestInvokeLocalOptionBypassesActiveHTTPServer(t *testing.T) {
 	}
 	if *seen != "" {
 		t.Fatalf("HTTP endpoint = %q, want no HTTP call", *seen)
+	}
+}
+
+func TestStopServerKillsRegisteredProcessAndRemovesState(t *testing.T) {
+	useTempHome(t)
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestHelperLongRunningProcess")
+	cmd.Env = append(os.Environ(), "ASSINADOR_TEST_HELPER_PROCESS=1")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("cmd.Start returned error: %v", err)
+	}
+	t.Cleanup(func() {
+		if cmd.ProcessState == nil {
+			_ = cmd.Process.Kill()
+			_, _ = cmd.Process.Wait()
+		}
+	})
+
+	state := &ServerState{
+		PID:       cmd.Process.Pid,
+		Port:      19080,
+		JavaPath:  "java",
+		JarPath:   "assinador.jar",
+		StartedAt: time.Now().UTC(),
+	}
+	if err := writeServerState(state); err != nil {
+		t.Fatalf("writeServerState returned error: %v", err)
+	}
+
+	stopped, err := StopServer(state.Port)
+	if err != nil {
+		t.Fatalf("StopServer returned error: %v", err)
+	}
+	if stopped.PID != state.PID {
+		t.Fatalf("stopped PID = %d, want %d", stopped.PID, state.PID)
+	}
+	if _, err := os.Stat(serverStatePath(state.Port)); !os.IsNotExist(err) {
+		t.Fatalf("state file should be removed, stat error = %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("process was not stopped")
+	}
+}
+
+func TestStopServerReturnsErrorWhenNoStateExists(t *testing.T) {
+	useTempHome(t)
+
+	if _, err := StopServer(19180); err == nil {
+		t.Fatal("expected StopServer to fail without registered state")
+	}
+}
+
+func TestHelperLongRunningProcess(t *testing.T) {
+	if os.Getenv("ASSINADOR_TEST_HELPER_PROCESS") != "1" {
+		return
+	}
+
+	for {
+		time.Sleep(time.Second)
 	}
 }
 

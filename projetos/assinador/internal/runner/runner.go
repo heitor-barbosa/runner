@@ -118,6 +118,33 @@ func StartServer(port int) (*ServerState, error) {
 	return state, nil
 }
 
+// StopServer encerra a instancia registrada do assinador.jar na porta informada.
+func StopServer(port int) (*ServerState, error) {
+	port = normalizePort(port)
+
+	state, err := readServerState(port)
+	if err != nil {
+		if isServerActive(port) {
+			return nil, fmt.Errorf("assinador.jar esta ativo na porta %d, mas nao foi iniciado por este CLI ou nao possui registro local", port)
+		}
+		return nil, fmt.Errorf("nenhuma instancia do assinador.jar registrada na porta %d", port)
+	}
+
+	process, err := os.FindProcess(state.PID)
+	if err != nil {
+		_ = removeServerState(port)
+		return state, fmt.Errorf("processo %d nao encontrado: %w", state.PID, err)
+	}
+
+	if err := process.Kill(); err != nil {
+		_ = removeServerState(port)
+		return state, fmt.Errorf("falha ao encerrar processo %d: %w", state.PID, err)
+	}
+
+	_ = removeServerState(port)
+	return state, nil
+}
+
 func invokeWithFallback(command string, payload map[string]interface{}, options InvokeOptions) (*Response, error) {
 	port := normalizePort(options.Port)
 	if !options.Local && hasUsableHTTPServer(port) {

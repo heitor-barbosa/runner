@@ -31,6 +31,7 @@ go run . --version
 go run . sign --help
 go run . validate --help
 go run . start --help
+go run . stop --help
 ```
 
 Saida esperada do comando de versao em desenvolvimento:
@@ -110,6 +111,12 @@ go run . start --port 8080
 O comando registra PID, porta, caminho do Java e caminho do JAR em `~/.hubsaude/`.
 Se uma instancia ja estiver respondendo em `/health` na porta informada, o CLI reutiliza
 essa instancia e nao inicia outro processo.
+
+Para encerrar a instancia registrada:
+
+```bash
+go run . stop --port 8080
+```
 
 Com o servidor ativo, os comandos `sign` e `validate` usam HTTP por padrao:
 

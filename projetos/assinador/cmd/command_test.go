@@ -28,3 +28,9 @@ func TestStartCommandIsRegistered(t *testing.T) {
 		t.Fatalf("start command not registered: %v", err)
 	}
 }
+
+func TestStopCommandIsRegistered(t *testing.T) {
+	if _, _, err := rootCmd.Find([]string{"stop"}); err != nil {
+		t.Fatalf("stop command not registered: %v", err)
+	}
+}
