@@ -11,8 +11,9 @@ import (
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Valida uma assinatura digital simulada",
-	Long: `Valida uma assinatura digital simulada invocando o assinador.jar localmente via java -jar.
+	Long: `Valida uma assinatura digital simulada invocando o assinador.jar via HTTP quando houver servidor ativo.
 
+Se o servidor nao estiver disponivel, o CLI faz fallback para java -jar. Use --local para forcar o modo local.
 O valor de --signature-data corresponde ao campo Signature.data de um recurso FHIR Signature,
 produzido pelo comando 'sign'.
 
@@ -29,6 +30,8 @@ var (
 	validateSignatureData string
 	validateTimestamp     int64
 	validatePolicy        string
+	validateLocal         bool
+	validatePort          int
 )
 
 func init() {
@@ -37,6 +40,8 @@ func init() {
 	validateCmd.Flags().StringVar(&validateSignatureData, "signature-data", "", "Valor de Signature.data em base64 (obrigatório)")
 	validateCmd.Flags().Int64Var(&validateTimestamp, "timestamp", 0, "Timestamp Unix UTC de referência em segundos (obrigatório)")
 	validateCmd.Flags().StringVar(&validatePolicy, "policy", "https://fhir.saude.go.gov.br/r4/seguranca/ImplementationGuide/br.go.ses.seguranca|0.1.2", "URI da política de assinatura")
+	validateCmd.Flags().BoolVar(&validateLocal, "local", false, "Força a invocação local via java -jar, ignorando servidor HTTP ativo")
+	validateCmd.Flags().IntVar(&validatePort, "port", 8080, "Porta do servidor HTTP do assinador.jar")
 
 	_ = validateCmd.MarkFlagRequired("signature-data")
 	_ = validateCmd.MarkFlagRequired("timestamp")
@@ -49,9 +54,10 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		"policyUri":          validatePolicy,
 	}
 
-	fmt.Fprintln(os.Stderr, "Invocando assinador.jar (modo local)...")
-
-	resp, err := runner.InvokeValidate(payload)
+	resp, err := runner.InvokeValidateWithOptions(payload, runner.InvokeOptions{
+		Local: validateLocal,
+		Port:  validatePort,
+	})
 	if err != nil {
 		return fmt.Errorf("erro ao invocar assinador.jar: %w", err)
 	}

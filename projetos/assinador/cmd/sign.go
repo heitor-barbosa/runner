@@ -11,8 +11,9 @@ import (
 var signCmd = &cobra.Command{
 	Use:   "sign",
 	Short: "Cria uma assinatura digital simulada",
-	Long: `Cria uma assinatura digital simulada invocando o assinador.jar localmente via java -jar.
+	Long: `Cria uma assinatura digital simulada invocando o assinador.jar via HTTP quando houver servidor ativo.
 
+Se o servidor nao estiver disponivel, o CLI faz fallback para java -jar. Use --local para forcar o modo local.
 O CLI valida as flags obrigatorias e o assinador.jar valida o conteudo recebido.
 Em caso de sucesso, exibe o valor de Signature.data (base64) pronto para uso em FHIR.
 
@@ -41,6 +42,8 @@ var (
 	signTimestamp    int64
 	signStrategy     string
 	signPolicy       string
+	signLocal        bool
+	signPort         int
 )
 
 func init() {
@@ -56,6 +59,8 @@ func init() {
 	signCmd.Flags().Int64Var(&signTimestamp, "timestamp", 0, "Timestamp Unix UTC de referência em segundos (obrigatório)")
 	signCmd.Flags().StringVar(&signStrategy, "strategy", "iat", "Estratégia de timestamp: iat ou tsa")
 	signCmd.Flags().StringVar(&signPolicy, "policy", "https://fhir.saude.go.gov.br/r4/seguranca/ImplementationGuide/br.go.ses.seguranca|0.1.2", "URI da política de assinatura")
+	signCmd.Flags().BoolVar(&signLocal, "local", false, "Força a invocação local via java -jar, ignorando servidor HTTP ativo")
+	signCmd.Flags().IntVar(&signPort, "port", 8080, "Porta do servidor HTTP do assinador.jar")
 
 	_ = signCmd.MarkFlagRequired("bundle")
 	_ = signCmd.MarkFlagRequired("provenance")
@@ -83,9 +88,10 @@ func runSign(cmd *cobra.Command, args []string) error {
 		payload["credentialAlias"] = signCredAlias
 	}
 
-	fmt.Fprintln(os.Stderr, "Invocando assinador.jar (modo local)...")
-
-	resp, err := runner.InvokeSign(payload)
+	resp, err := runner.InvokeSignWithOptions(payload, runner.InvokeOptions{
+		Local: signLocal,
+		Port:  signPort,
+	})
 	if err != nil {
 		return fmt.Errorf("erro ao invocar assinador.jar: %w", err)
 	}

@@ -1,6 +1,14 @@
 package runner
 
-import "testing"
+import (
+	"encoding/json"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
 
 func TestParseResponseSuccess(t *testing.T) {
 	response, err := parseResponse([]byte(`{"success":true,"data":"SIGNATURE"}`))
@@ -34,5 +42,162 @@ func TestNormalizePortUsesDefaultWhenUnset(t *testing.T) {
 	}
 	if got := normalizePort(9090); got != 9090 {
 		t.Fatalf("normalizePort(9090) = %d, want 9090", got)
+	}
+}
+
+func TestInvokeSignUsesHTTPWhenServerIsActive(t *testing.T) {
+	port, closeServer, seen := startFakeAssinadorHTTP(t)
+	defer closeServer()
+	useTempHome(t)
+
+	if err := writeServerState(&ServerState{
+		PID:       1234,
+		Port:      port,
+		JavaPath:  "java",
+		JarPath:   "assinador.jar",
+		StartedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("writeServerState returned error: %v", err)
+	}
+
+	restore := replaceInvokeLocal(t, func(string, map[string]interface{}) (*Response, error) {
+		t.Fatal("invokeLocal should not be called when HTTP server is active")
+		return nil, nil
+	})
+	defer restore()
+
+	response, err := InvokeSignWithOptions(map[string]interface{}{"bundle": "FHIR"}, InvokeOptions{Port: port})
+	if err != nil {
+		t.Fatalf("InvokeSignWithOptions returned error: %v", err)
+	}
+	if !response.Success || response.Data != "HTTP-SIGNATURE" {
+		t.Fatalf("unexpected response: %+v", response)
+	}
+	if *seen != "/sign" {
+		t.Fatalf("HTTP endpoint = %q, want /sign", *seen)
+	}
+}
+
+func TestInvokeValidateFallsBackToLocalWhenServerIsUnavailable(t *testing.T) {
+	useTempHome(t)
+
+	restore := replaceInvokeLocal(t, func(command string, payload map[string]interface{}) (*Response, error) {
+		if command != "validate" {
+			t.Fatalf("command = %q, want validate", command)
+		}
+		return &Response{Success: true, Data: "LOCAL-VALID"}, nil
+	})
+	defer restore()
+
+	response, err := InvokeValidateWithOptions(map[string]interface{}{"signatureData": "abc"}, InvokeOptions{Port: 1})
+	if err != nil {
+		t.Fatalf("InvokeValidateWithOptions returned error: %v", err)
+	}
+	if !response.Success || response.Data != "LOCAL-VALID" {
+		t.Fatalf("unexpected response: %+v", response)
+	}
+}
+
+func TestInvokeLocalOptionBypassesActiveHTTPServer(t *testing.T) {
+	port, closeServer, seen := startFakeAssinadorHTTP(t)
+	defer closeServer()
+	useTempHome(t)
+
+	if err := writeServerState(&ServerState{Port: port, StartedAt: time.Now().UTC()}); err != nil {
+		t.Fatalf("writeServerState returned error: %v", err)
+	}
+
+	restore := replaceInvokeLocal(t, func(command string, payload map[string]interface{}) (*Response, error) {
+		if command != "sign" {
+			t.Fatalf("command = %q, want sign", command)
+		}
+		return &Response{Success: true, Data: "LOCAL-SIGNATURE"}, nil
+	})
+	defer restore()
+
+	response, err := InvokeSignWithOptions(map[string]interface{}{"bundle": "FHIR"}, InvokeOptions{Local: true, Port: port})
+	if err != nil {
+		t.Fatalf("InvokeSignWithOptions returned error: %v", err)
+	}
+	if !response.Success || response.Data != "LOCAL-SIGNATURE" {
+		t.Fatalf("unexpected response: %+v", response)
+	}
+	if *seen != "" {
+		t.Fatalf("HTTP endpoint = %q, want no HTTP call", *seen)
+	}
+}
+
+func replaceInvokeLocal(t *testing.T, fn func(string, map[string]interface{}) (*Response, error)) func() {
+	t.Helper()
+	previous := invokeLocalFunc
+	invokeLocalFunc = fn
+	return func() {
+		invokeLocalFunc = previous
+	}
+}
+
+func useTempHome(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
+	if err := os.MkdirAll(filepath.Join(home, ".hubsaude"), 0o755); err != nil {
+		t.Fatalf("MkdirAll returned error: %v", err)
+	}
+}
+
+func startFakeAssinadorHTTP(t *testing.T) (int, func(), *string) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen returned error: %v", err)
+	}
+
+	seen := ""
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"success":true}`))
+	})
+	mux.HandleFunc("/sign", func(w http.ResponseWriter, r *http.Request) {
+		seen = r.URL.Path
+		assertJSONRequest(t, r)
+		writeJSON(t, w, Response{Success: true, Data: "HTTP-SIGNATURE"})
+	})
+	mux.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
+		seen = r.URL.Path
+		assertJSONRequest(t, r)
+		writeJSON(t, w, Response{Success: true, Data: "HTTP-VALID"})
+	})
+
+	server := &http.Server{Handler: mux}
+	go func() {
+		_ = server.Serve(listener)
+	}()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	return port, func() {
+		_ = server.Close()
+	}, &seen
+}
+
+func assertJSONRequest(t *testing.T, r *http.Request) {
+	t.Helper()
+	if r.Method != http.MethodPost {
+		t.Fatalf("method = %q, want POST", r.Method)
+	}
+	var body map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		t.Fatalf("request body is not valid JSON: %v", err)
+	}
+}
+
+func writeJSON(t *testing.T, w http.ResponseWriter, response Response) {
+	t.Helper()
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		t.Fatalf("json.Encode returned error: %v", err)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -35,14 +36,32 @@ type ServerState struct {
 	Reused    bool      `json:"-"`
 }
 
-// InvokeSign invoca o assinador.jar no modo local para criacao de assinatura.
-func InvokeSign(payload map[string]interface{}) (*Response, error) {
-	return invoke("sign", payload)
+// InvokeOptions configura a estrategia de invocacao do assinador.jar.
+type InvokeOptions struct {
+	Local bool
+	Port  int
 }
 
-// InvokeValidate invoca o assinador.jar no modo local para validacao de assinatura.
+var invokeLocalFunc = invokeLocal
+
+// InvokeSign invoca o assinador.jar para criacao de assinatura.
+func InvokeSign(payload map[string]interface{}) (*Response, error) {
+	return InvokeSignWithOptions(payload, InvokeOptions{})
+}
+
+// InvokeSignWithOptions invoca o assinador.jar para criacao de assinatura com opcoes explicitas.
+func InvokeSignWithOptions(payload map[string]interface{}, options InvokeOptions) (*Response, error) {
+	return invokeWithFallback("sign", payload, options)
+}
+
+// InvokeValidate invoca o assinador.jar para validacao de assinatura.
 func InvokeValidate(payload map[string]interface{}) (*Response, error) {
-	return invoke("validate", payload)
+	return InvokeValidateWithOptions(payload, InvokeOptions{})
+}
+
+// InvokeValidateWithOptions invoca o assinador.jar para validacao de assinatura com opcoes explicitas.
+func InvokeValidateWithOptions(payload map[string]interface{}, options InvokeOptions) (*Response, error) {
+	return invokeWithFallback("validate", payload, options)
 }
 
 // StartServer inicia o assinador.jar em modo servidor, ou reutiliza a instancia ativa na porta.
@@ -99,7 +118,53 @@ func StartServer(port int) (*ServerState, error) {
 	return state, nil
 }
 
-func invoke(command string, payload map[string]interface{}) (*Response, error) {
+func invokeWithFallback(command string, payload map[string]interface{}, options InvokeOptions) (*Response, error) {
+	port := normalizePort(options.Port)
+	if !options.Local && hasUsableHTTPServer(port) {
+		response, err := invokeHTTP(command, payload, port)
+		if err == nil {
+			return response, nil
+		}
+	}
+
+	return invokeLocalFunc(command, payload)
+}
+
+func invokeHTTP(command string, payload map[string]interface{}, port int) (*Response, error) {
+	jsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao serializar parametros para HTTP: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/%s", normalizePort(port), command)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonBytes))
+	if err != nil {
+		return nil, fmt.Errorf("erro ao criar requisicao HTTP: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao chamar assinador.jar via HTTP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao ler resposta HTTP do assinador.jar: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
+		return nil, fmt.Errorf("resposta HTTP inesperada do assinador.jar: %s\nSaida recebida: %s", resp.Status, string(body))
+	}
+
+	return parseResponse(body)
+}
+
+func invokeLocal(command string, payload map[string]interface{}) (*Response, error) {
 	javaPath, err := findJava()
 	if err != nil {
 		return nil, err
@@ -134,6 +199,13 @@ func invoke(command string, payload map[string]interface{}) (*Response, error) {
 	}
 
 	return parseResponse(stdout.Bytes())
+}
+
+func hasUsableHTTPServer(port int) bool {
+	if state, err := readServerState(port); err == nil {
+		return isServerActive(normalizePort(state.Port))
+	}
+	return isServerActive(port)
 }
 
 func findJava() (string, error) {
