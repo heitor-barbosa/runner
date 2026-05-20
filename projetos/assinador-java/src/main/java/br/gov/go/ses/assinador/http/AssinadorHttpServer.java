@@ -13,6 +13,10 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class AssinadorHttpServer implements AutoCloseable {
 
@@ -21,15 +25,44 @@ public class AssinadorHttpServer implements AutoCloseable {
 
     private final HttpServer server;
     private final ExecutorService executor;
+    private final ScheduledExecutorService timeoutExecutor;
+    private final AtomicLong lastInteractionMillis;
+    private final AtomicBoolean stopped;
+    private final long timeoutMillis;
+    private final Runnable onStop;
 
-    private AssinadorHttpServer(HttpServer server, ExecutorService executor) {
+    private AssinadorHttpServer(
+            HttpServer server,
+            ExecutorService executor,
+            ScheduledExecutorService timeoutExecutor,
+            long timeoutMillis,
+            Runnable onStop
+    ) {
         this.server = server;
         this.executor = executor;
+        this.timeoutExecutor = timeoutExecutor;
+        this.timeoutMillis = timeoutMillis;
+        this.onStop = onStop;
+        this.lastInteractionMillis = new AtomicLong(System.currentTimeMillis());
+        this.stopped = new AtomicBoolean(false);
     }
 
     public static AssinadorHttpServer create(int port) throws IOException {
+        return create(port, 0, null);
+    }
+
+    public static AssinadorHttpServer create(int port, int timeoutMinutes, Runnable onStop) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         ExecutorService executor = Executors.newCachedThreadPool();
+        ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor();
+        long timeoutMillis = timeoutMinutes > 0 ? TimeUnit.MINUTES.toMillis(timeoutMinutes) : 0L;
+        AssinadorHttpServer assinadorServer = new AssinadorHttpServer(
+                server,
+                executor,
+                timeoutExecutor,
+                timeoutMillis,
+                onStop
+        );
         SignatureService service = new FakeSignatureService();
         SignatureController controller = new SignatureController(
                 service,
@@ -37,9 +70,16 @@ public class AssinadorHttpServer implements AutoCloseable {
                 new ValidateRequestValidator()
         );
 
-        server.createContext("/sign", controller::handleSign);
-        server.createContext("/validate", controller::handleValidate);
+        server.createContext("/sign", exchange -> {
+            assinadorServer.touch();
+            controller.handleSign(exchange);
+        });
+        server.createContext("/validate", exchange -> {
+            assinadorServer.touch();
+            controller.handleValidate(exchange);
+        });
         server.createContext("/health", exchange -> {
+            assinadorServer.touch();
             if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
                 exchange.getResponseHeaders().add("Allow", "GET");
                 byte[] error = new ObjectMapper().writeValueAsBytes(AssinadorResponse.error(
@@ -63,11 +103,14 @@ public class AssinadorHttpServer implements AutoCloseable {
         });
         server.setExecutor(executor);
 
-        return new AssinadorHttpServer(server, executor);
+        return assinadorServer;
     }
 
     public void start() {
         server.start();
+        if (timeoutMillis > 0) {
+            timeoutExecutor.scheduleAtFixedRate(this::stopIfIdle, 1, 1, TimeUnit.MINUTES);
+        }
     }
 
     public int getPort() {
@@ -75,12 +118,30 @@ public class AssinadorHttpServer implements AutoCloseable {
     }
 
     public void stop() {
+        if (!stopped.compareAndSet(false, true)) {
+            return;
+        }
         server.stop(0);
         executor.shutdownNow();
+        timeoutExecutor.shutdownNow();
+        if (onStop != null) {
+            onStop.run();
+        }
     }
 
     @Override
     public void close() {
         stop();
+    }
+
+    private void touch() {
+        lastInteractionMillis.set(System.currentTimeMillis());
+    }
+
+    private void stopIfIdle() {
+        long idleMillis = System.currentTimeMillis() - lastInteractionMillis.get();
+        if (idleMillis >= timeoutMillis) {
+            stop();
+        }
     }
 }

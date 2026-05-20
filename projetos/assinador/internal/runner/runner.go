@@ -28,12 +28,13 @@ type Response struct {
 
 // ServerState representa uma instancia do assinador.jar iniciada pelo CLI.
 type ServerState struct {
-	PID       int       `json:"pid"`
-	Port      int       `json:"port"`
-	JavaPath  string    `json:"javaPath"`
-	JarPath   string    `json:"jarPath"`
-	StartedAt time.Time `json:"startedAt"`
-	Reused    bool      `json:"-"`
+	PID            int       `json:"pid"`
+	Port           int       `json:"port"`
+	JavaPath       string    `json:"javaPath"`
+	JarPath        string    `json:"jarPath"`
+	StartedAt      time.Time `json:"startedAt"`
+	TimeoutMinutes int       `json:"timeoutMinutes,omitempty"`
+	Reused         bool      `json:"-"`
 }
 
 // InvokeOptions configura a estrategia de invocacao do assinador.jar.
@@ -65,8 +66,11 @@ func InvokeValidateWithOptions(payload map[string]interface{}, options InvokeOpt
 }
 
 // StartServer inicia o assinador.jar em modo servidor, ou reutiliza a instancia ativa na porta.
-func StartServer(port int) (*ServerState, error) {
+func StartServer(port int, timeoutMinutes int) (*ServerState, error) {
 	port = normalizePort(port)
+	if timeoutMinutes < 0 {
+		return nil, fmt.Errorf("timeout nao pode ser negativo: %d", timeoutMinutes)
+	}
 
 	if state, err := readServerState(port); err == nil && isServerActive(port) {
 		state.Reused = true
@@ -87,7 +91,11 @@ func StartServer(port int) (*ServerState, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command(javaPath, "-jar", jarPath, "server", "--port", strconv.Itoa(port)) //nolint:gosec
+	args := []string{"-jar", jarPath, "server", "--port", strconv.Itoa(port)}
+	if timeoutMinutes > 0 {
+		args = append(args, "--timeout", strconv.Itoa(timeoutMinutes))
+	}
+	cmd := exec.Command(javaPath, args...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -96,11 +104,12 @@ func StartServer(port int) (*ServerState, error) {
 	}
 
 	state := &ServerState{
-		PID:       cmd.Process.Pid,
-		Port:      port,
-		JavaPath:  javaPath,
-		JarPath:   jarPath,
-		StartedAt: time.Now().UTC(),
+		PID:            cmd.Process.Pid,
+		Port:           port,
+		JavaPath:       javaPath,
+		JarPath:        jarPath,
+		StartedAt:      time.Now().UTC(),
+		TimeoutMinutes: timeoutMinutes,
 	}
 
 	if err := writeServerState(state); err != nil {

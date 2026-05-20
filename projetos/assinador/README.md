@@ -112,6 +112,12 @@ O comando registra PID, porta, caminho do Java e caminho do JAR em `~/.hubsaude/
 Se uma instancia ja estiver respondendo em `/health` na porta informada, o CLI reutiliza
 essa instancia e nao inicia outro processo.
 
+Para encerrar automaticamente apos um periodo sem requisicoes:
+
+```bash
+go run . start --port 8080 --timeout 15
+```
+
 Para encerrar a instancia registrada:
 
 ```bash

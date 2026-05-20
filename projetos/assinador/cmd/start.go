@@ -7,7 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var startPort int
+var (
+	startPort    int
+	startTimeout int
+)
 
 var startCmd = &cobra.Command{
 	Use:   "start",
@@ -22,10 +25,11 @@ e nao inicia outro processo.`,
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.Flags().IntVar(&startPort, "port", 8080, "Porta do servidor HTTP do assinador.jar")
+	startCmd.Flags().IntVar(&startTimeout, "timeout", 0, "Minutos de inatividade antes do encerramento automatico; 0 desativa")
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
-	state, err := runner.StartServer(startPort)
+	state, err := runner.StartServer(startPort, startTimeout)
 	if err != nil {
 		return err
 	}
@@ -40,5 +44,8 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Assinador HTTP iniciado na porta %d (PID %d)\n", state.Port, state.PID)
+	if state.TimeoutMinutes > 0 {
+		fmt.Fprintf(cmd.OutOrStdout(), "Timeout por inatividade: %d minuto(s)\n", state.TimeoutMinutes)
+	}
 	return nil
 }

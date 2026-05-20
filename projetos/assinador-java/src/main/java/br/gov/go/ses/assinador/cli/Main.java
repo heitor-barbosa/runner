@@ -30,7 +30,7 @@ public class Main {
         String command = args[0].toLowerCase();
 
         if ("server".equals(command)) {
-            new HttpServerMain().startAndBlock(extractPort(args));
+            new HttpServerMain().startAndBlock(extractPort(args), extractTimeout(args));
             return;
         }
 
@@ -125,7 +125,7 @@ public class Main {
                 Uso:
                   java -jar assinador.jar sign     --json '<SignRequest JSON>'
                   java -jar assinador.jar validate --json '<ValidateRequest JSON>'
-                  java -jar assinador.jar server   --port 8080
+                  java -jar assinador.jar server   --port 8080 --timeout 15
                 """);
     }
 
@@ -145,6 +145,24 @@ public class Main {
             }
         }
         return AssinadorHttpServer.DEFAULT_PORT;
+    }
+
+    private static int extractTimeout(String[] args) {
+        for (int index = 1; index < args.length - 1; index++) {
+            if ("--timeout".equals(args[index])) {
+                try {
+                    int timeout = Integer.parseInt(args[index + 1]);
+                    if (timeout < 0) {
+                        throw new NumberFormatException("timeout negativo");
+                    }
+                    return timeout;
+                } catch (NumberFormatException error) {
+                    printError("CONFIG.INVALID-PARAMETER", "Timeout invalido: " + args[index + 1]);
+                    System.exit(1);
+                }
+            }
+        }
+        return 0;
     }
 
     private static String extractJson(String[] args) {

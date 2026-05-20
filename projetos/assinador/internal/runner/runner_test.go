@@ -46,6 +46,12 @@ func TestNormalizePortUsesDefaultWhenUnset(t *testing.T) {
 	}
 }
 
+func TestStartServerRejectsNegativeTimeout(t *testing.T) {
+	if _, err := StartServer(8080, -1); err == nil {
+		t.Fatal("expected StartServer to reject negative timeout")
+	}
+}
+
 func TestInvokeSignUsesHTTPWhenServerIsActive(t *testing.T) {
 	port, closeServer, seen := startFakeAssinadorHTTP(t)
 	defer closeServer()
