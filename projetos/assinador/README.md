@@ -10,7 +10,7 @@ CLI em Go do Sistema Runner. A partir da Sprint 2, este modulo tambem executa o 
 - `cmd/validate.go`: comando `assinatura validate`.
 - `cmd/version.go`: comando `assinatura version` e variavel de versao usada no build.
 - `internal/jdk`: deteccao e provisionamento automatico do JDK 21.
-- `internal/runner`: invocacao local do `assinador.jar`.
+- `internal/runner`: invocacao local ou HTTP do `assinador.jar`.
 - `.github/workflows/assinatura.yml`: workflow de CI/CD mantido na raiz do repositorio.
 
 ## Requisitos
@@ -110,6 +110,21 @@ go run . start --port 8080
 O comando registra PID, porta, caminho do Java e caminho do JAR em `~/.hubsaude/`.
 Se uma instancia ja estiver respondendo em `/health` na porta informada, o CLI reutiliza
 essa instancia e nao inicia outro processo.
+
+Com o servidor ativo, os comandos `sign` e `validate` usam HTTP por padrao:
+
+```bash
+go run . sign --port 8080 ...
+go run . validate --port 8080 ...
+```
+
+Se o servidor nao estiver disponivel, o CLI faz fallback automatico para o modo local
+via `java -jar`. Para forcar o modo local mesmo com servidor ativo:
+
+```bash
+go run . sign --local ...
+go run . validate --local ...
+```
 
 ## CI/CD
 

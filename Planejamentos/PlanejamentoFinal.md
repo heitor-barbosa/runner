@@ -233,10 +233,10 @@
 **para que** eu tenha menor latência nas operações, eliminando o overhead de cold start.
 
 **Critérios de aceitação:**
-- [ ] CLI envia requisições HTTP para os endpoints `/sign` e `/validate`
-- [ ] Modo servidor é utilizado por padrão quando há instância em execução
-- [ ] Fallback para modo local quando servidor não está disponível (ou conforme flag `--local`)
-- [ ] Testes de integração validam o fluxo CLI → HTTP → assinador.jar
+- [x] CLI envia requisições HTTP para os endpoints `/sign` e `/validate`
+- [x] Modo servidor é utilizado por padrão quando há instância em execução
+- [x] Fallback para modo local quando servidor não está disponível (ou conforme flag `--local`)
+- [x] Testes de integração validam o fluxo CLI → HTTP → assinador.jar
 
 ### US-01.7 — Detectar instância do assinador.jar em execução
 

@@ -72,20 +72,20 @@ Resposta (assinatura ou validação)
 
 ## 5. Estado Atual
 
-Até a Sprint 2, o projeto já entrega:
+Até a Sprint 3, o projeto já entrega:
 
 - CLI `assinatura` com comandos `version`, `sign` e `validate`
 - `assinador.jar` em Java 21 com simulação de assinatura e validação
 - Invocação local do Java via `java -jar`
+- Invocação HTTP para `sign` e `validate` quando o servidor está ativo
+- Comando `assinatura start` para iniciar/reutilizar o servidor HTTP
 - Validação de parâmetros e mensagens de erro estruturadas
 - Detecção/provisionamento automático de JDK 21
-- Testes Go, testes Java e integração CLI → JAR no CI
+- Testes Go, testes Java e integração CLI → JAR/HTTP no CI
 
 Ficam para as próximas sprints:
 
-- Execução em modo servidor HTTP
-- Gerenciamento de processos (`start`, `stop`, `status`)
-- Detecção automática de instância ativa
+- Comando `assinatura stop`
 - Timeout automático por inatividade
 - Integração com material criptográfico e simulador dedicado
 
@@ -93,7 +93,7 @@ Ficam para as próximas sprints:
 
 ## 6. Como Usar
 
-O fluxo local da Sprint 2 está documentado em `projetos/assinador/README.md` e em `Planejamentos/StatusSprint2.md`.
+Os fluxos das sprints estão documentados em `StatusSprints/` e o uso do CLI em `projetos/assinador/README.md`.
 
 Resumo do uso:
 
