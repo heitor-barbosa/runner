@@ -209,10 +209,10 @@
 **para que** eu possa utilizar material criptográfico real ou simulado nas operações de assinatura.
 
 **Critérios de aceitação:**
-- [ ] Integração com PKCS#11 via `SunPKCS11` provider
-- [ ] Testes de integração utilizando SoftHSM2 (ou simulador equivalente)
-- [ ] Comportamento adequado quando dispositivo não está disponível (mensagem clara)
-- [ ] Documentação do setup necessário para uso com dispositivo criptográfico
+- [x] Integração com PKCS#11 via `SunPKCS11` provider
+- [x] Testes de integração utilizando SoftHSM2 (ou simulador equivalente)
+- [x] Comportamento adequado quando dispositivo não está disponível (mensagem clara)
+- [x] Documentação do setup necessário para uso com dispositivo criptográfico
 
 ### US-01.5 — Iniciar assinador.jar no modo servidor
 
@@ -221,10 +221,10 @@
 **para que** o assinador.jar fique disponível para requisições HTTP com menor latência.
 
 **Critérios de aceitação:**
-- [ ] CLI inicia o assinador.jar como processo em background na porta padrão
-- [ ] PID e porta do processo são registrados em `~/.hubsaude/` para gestão posterior
-- [ ] Feedback é exibido ao usuário confirmando que o servidor iniciou
-- [ ] Porta pode ser personalizada via parâmetro `--port`
+- [x] CLI inicia o assinador.jar como processo em background na porta padrão
+- [x] PID e porta do processo são registrados em `~/.hubsaude/` para gestão posterior
+- [x] Feedback é exibido ao usuário confirmando que o servidor iniciou
+- [x] Porta pode ser personalizada via parâmetro `--port`
 
 ### US-01.6 — Invocar assinador.jar via HTTP
 
@@ -245,10 +245,10 @@
 **para que** não sejam criadas instâncias duplicadas desnecessariamente.
 
 **Critérios de aceitação:**
-- [ ] CLI consulta `~/.hubsaude/` para verificar processo registrado
-- [ ] Verificação de health check HTTP confirma que o processo está respondendo
-- [ ] Se instância ativa é encontrada, CLI a reutiliza em vez de iniciar nova
-- [ ] Se processo registrado não responde, é considerado inativo
+- [x] CLI consulta `~/.hubsaude/` para verificar processo registrado
+- [x] Verificação de health check HTTP confirma que o processo está respondendo
+- [x] Se instância ativa é encontrada, CLI a reutiliza em vez de iniciar nova
+- [x] Se processo registrado não responde, é considerado inativo
 
 ### US-01.8 — Interromper execução do assinador.jar
 
@@ -257,10 +257,10 @@
 **para que** eu tenha controle sobre os processos em execução no meu sistema.
 
 **Critérios de aceitação:**
-- [ ] Comando `assinatura stop` encerra o assinador.jar na porta padrão
-- [ ] Parâmetro `--port` permite especificar a porta do processo a encerrar
-- [ ] Feedback é exibido confirmando o encerramento
-- [ ] Registro em `~/.hubsaude/` é atualizado após encerramento
+- [x] Comando `assinatura stop` encerra o assinador.jar na porta padrão
+- [x] Parâmetro `--port` permite especificar a porta do processo a encerrar
+- [x] Feedback é exibido confirmando o encerramento
+- [x] Registro em `~/.hubsaude/` é atualizado após encerramento
 
 ### US-01.9 — Agendar interrupção do assinador.jar por inatividade
 
@@ -269,9 +269,9 @@
 **para que** recursos do sistema sejam liberados automaticamente quando não estiverem em uso.
 
 **Critérios de aceitação:**
-- [ ] Parâmetro `--timeout <minutos>` define tempo máximo de inatividade
-- [ ] Após o período sem requisições, assinador.jar é encerrado automaticamente pelo CLI ou pelo próprio servidor
-- [ ] Mecanismo de timeout é documentado no help do CLI
+- [x] Parâmetro `--timeout <minutos>` define tempo máximo de inatividade
+- [x] Após o período sem requisições, assinador.jar é encerrado automaticamente pelo CLI ou pelo próprio servidor
+- [x] Mecanismo de timeout é documentado no help do CLI
 
 ---
 **Ordem de Implementação**
@@ -323,8 +323,8 @@
 **para que** a gestão do Simulador tenha interface independente e clara.
 
 **Critérios de aceitação:**
-- [ ] Projeto CLI `simulador` segue a mesma estrutura do CLI `assinatura`
-- [ ] Comandos `start`, `stop` e `status` definidos
+- [x] Projeto CLI `simulador` segue a mesma estrutura do CLI `assinatura`
+- [x] Comandos `start`, `stop` e `status` definidos
 - [ ] Pipeline CI/CD gera binários multiplataforma do CLI `simulador`
 - [ ] Binários publicados no GitHub Releases junto com o CLI `assinatura`
 
@@ -343,6 +343,14 @@
 
 - [ ] Checksum SHA-256 e Sigstore Cosign incorporados no fluxo (US-05.3)
 
+---
+**Ordem de Implementação**
+- US-03.3: criar a estrutura base do CLI `simulador`, seguindo o padrão do CLI `assinatura`, com comandos `start`, `stop` e `status` registrados.
+- US-03.4: implementar a obtenção dinâmica do `simulador.jar`, com consulta ao GitHub Releases, cache em `~/.hubsaude/`, opção `--source` e validação por checksum.
+- US-03.1: implementar `simulador start`, reutilizando o download/cache do JAR, validando portas disponíveis e registrando PID/porta em `~/.hubsaude/`.
+- US-03.2: implementar `simulador status` para consultar o registro local e confirmar se o processo ainda está ativo.
+- US-03.2: implementar `simulador stop`, encerrando o processo registrado e atualizando/removendo o estado em `~/.hubsaude/`.
+- US-03.3 + US-05.3: ajustar CI/CD e releases para publicar o binário `simulador` junto do `assinatura`, mantendo checksums e assinatura Cosign.
 ---
 
 ## Resumo de Sprints
