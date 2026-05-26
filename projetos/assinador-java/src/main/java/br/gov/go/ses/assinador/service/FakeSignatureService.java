@@ -21,7 +21,7 @@ public class FakeSignatureService implements SignatureService {
         this(new Pkcs11ProviderLoader());
     }
 
-    FakeSignatureService(Pkcs11ProviderLoader pkcs11ProviderLoader) {
+    public FakeSignatureService(Pkcs11ProviderLoader pkcs11ProviderLoader) {
         this.pkcs11ProviderLoader = pkcs11ProviderLoader;
     }
 

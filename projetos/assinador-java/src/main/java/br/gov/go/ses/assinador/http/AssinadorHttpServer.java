@@ -52,6 +52,19 @@ public class AssinadorHttpServer implements AutoCloseable {
     }
 
     public static AssinadorHttpServer create(int port, int timeoutMinutes, Runnable onStop) throws IOException {
+        return create(port, timeoutMinutes, onStop, new FakeSignatureService());
+    }
+
+    static AssinadorHttpServer create(int port, SignatureService service) throws IOException {
+        return create(port, 0, null, service);
+    }
+
+    private static AssinadorHttpServer create(
+            int port,
+            int timeoutMinutes,
+            Runnable onStop,
+            SignatureService service
+    ) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         ExecutorService executor = Executors.newCachedThreadPool();
         ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -63,7 +76,6 @@ public class AssinadorHttpServer implements AutoCloseable {
                 timeoutMillis,
                 onStop
         );
-        SignatureService service = new FakeSignatureService();
         SignatureController controller = new SignatureController(
                 service,
                 new SignRequestValidator(),
