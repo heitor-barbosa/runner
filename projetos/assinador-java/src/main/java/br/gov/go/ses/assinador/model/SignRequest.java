@@ -8,6 +8,8 @@ public class SignRequest {
     private String credentialContent;
     private String credentialPassword;
     private String credentialAlias;
+    private String pkcs11ConfigPath;
+    private String tokenLabel;
     private String certificateChain;
     private Long referenceTimestamp;
     private String strategy;
@@ -59,6 +61,22 @@ public class SignRequest {
 
     public void setCredentialAlias(String credentialAlias) {
         this.credentialAlias = credentialAlias;
+    }
+
+    public String getPkcs11ConfigPath() {
+        return pkcs11ConfigPath;
+    }
+
+    public void setPkcs11ConfigPath(String pkcs11ConfigPath) {
+        this.pkcs11ConfigPath = pkcs11ConfigPath;
+    }
+
+    public String getTokenLabel() {
+        return tokenLabel;
+    }
+
+    public void setTokenLabel(String tokenLabel) {
+        this.tokenLabel = tokenLabel;
     }
 
     public String getCertificateChain() {

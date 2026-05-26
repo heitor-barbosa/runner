@@ -15,8 +15,23 @@ public class FakeSignatureService implements SignatureService {
     private static final String FAKE_SIGNATURE =
             "FAKE_SIGNATURE_VALUE_BASE64URL_PLACEHOLDER_SPRINT2";
 
+    private final Pkcs11ProviderLoader pkcs11ProviderLoader;
+
+    public FakeSignatureService() {
+        this(new Pkcs11ProviderLoader());
+    }
+
+    FakeSignatureService(Pkcs11ProviderLoader pkcs11ProviderLoader) {
+        this.pkcs11ProviderLoader = pkcs11ProviderLoader;
+    }
+
     @Override
     public AssinadorResponse sign(SignRequest request) {
+        AssinadorResponse pkcs11Error = preparePkcs11IfNeeded(request);
+        if (pkcs11Error != null) {
+            return pkcs11Error;
+        }
+
         String jws = buildFakeJws(request.getReferenceTimestamp());
         String signatureData = Base64.getEncoder()
                 .encodeToString(jws.getBytes(StandardCharsets.UTF_8));
@@ -50,6 +65,28 @@ public class FakeSignatureService implements SignatureService {
         }
 
         return AssinadorResponse.ok("VALIDATION.SUCCESS");
+    }
+
+    private AssinadorResponse preparePkcs11IfNeeded(SignRequest request) {
+        String credentialType = request.getCredentialType();
+        if (credentialType == null) {
+            return null;
+        }
+
+        String normalizedType = credentialType.toUpperCase();
+        if (!"TOKEN".equals(normalizedType) && !"SMARTCARD".equals(normalizedType)) {
+            return null;
+        }
+
+        try {
+            pkcs11ProviderLoader.load(request.getPkcs11ConfigPath());
+            return null;
+        } catch (RuntimeException error) {
+            return AssinadorResponse.error(
+                    "PKCS11.DEVICE-UNAVAILABLE",
+                    "Dispositivo criptografico indisponivel ou configuracao PKCS#11 invalida: " + error.getMessage()
+            );
+        }
     }
 
     private String buildFakeJws(Long referenceTimestamp) {

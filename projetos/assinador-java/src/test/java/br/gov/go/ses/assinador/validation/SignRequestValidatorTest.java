@@ -85,6 +85,31 @@ class SignRequestValidatorTest {
         assertHasCode(errors, "CONFIG.MISSING-PARAMETER");
     }
 
+    @Test
+    void tokenShouldRequirePkcs11ConfigAndAlias() {
+        SignRequest request = buildValid();
+        request.setCredentialType("TOKEN");
+        request.setPkcs11ConfigPath(null);
+        request.setCredentialAlias(null);
+
+        List<ValidationError> errors = validator.validate(request);
+
+        assertFalse(errors.isEmpty());
+        assertHasCode(errors, "PKCS11.CONFIG-MISSING");
+        assertHasCode(errors, "PKCS11.ALIAS-MISSING");
+    }
+
+    @Test
+    void smartCardShouldAcceptPkcs11Metadata() {
+        SignRequest request = buildValid();
+        request.setCredentialType("SMARTCARD");
+        request.setPkcs11ConfigPath("pkcs11.cfg");
+        request.setCredentialAlias("assinatura");
+        request.setTokenLabel("token-a");
+
+        assertTrue(validator.validate(request).isEmpty());
+    }
+
     private SignRequest buildValid() {
         SignRequest request = new SignRequest();
         request.setBundle("{\"resourceType\":\"Bundle\",\"entry\":[{}]}");

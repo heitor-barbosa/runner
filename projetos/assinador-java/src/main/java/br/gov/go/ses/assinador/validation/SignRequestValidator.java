@@ -205,6 +205,32 @@ public class SignRequestValidator {
                 ));
             }
         }
+
+        if ("TOKEN".equals(normalizedType) || "SMARTCARD".equals(normalizedType)) {
+            if (request.getPkcs11ConfigPath() == null || request.getPkcs11ConfigPath().isBlank()) {
+                errors.add(new ValidationError(
+                        "PKCS11.CONFIG-MISSING",
+                        "O parametro pkcs11ConfigPath e obrigatorio para credenciais TOKEN ou SMARTCARD."
+                ));
+            }
+            if (request.getCredentialAlias() == null || request.getCredentialAlias().isBlank()) {
+                errors.add(new ValidationError(
+                        "PKCS11.ALIAS-MISSING",
+                        "O parametro credentialAlias e obrigatorio para selecionar a chave no dispositivo criptografico."
+                ));
+            } else if (request.getCredentialAlias().length() > 64) {
+                errors.add(new ValidationError(
+                        "MIDDLEWARE.TOKEN-LABEL-INVALID",
+                        "O alias credentialAlias deve ter no maximo 64 caracteres."
+                ));
+            }
+            if (request.getTokenLabel() != null && request.getTokenLabel().length() > 64) {
+                errors.add(new ValidationError(
+                        "MIDDLEWARE.TOKEN-LABEL-INVALID",
+                        "O rotulo tokenLabel deve ter no maximo 64 caracteres."
+                ));
+            }
+        }
     }
 
     private void validateCertificateChain(String certificateChain, List<ValidationError> errors) {

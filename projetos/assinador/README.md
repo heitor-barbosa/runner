@@ -139,6 +139,27 @@ go run . sign --local ...
 go run . validate --local ...
 ```
 
+## PKCS#11
+
+Para simular assinatura usando token ou smart card, informe o tipo de credencial
+`TOKEN` ou `SMARTCARD` e a configuracao SunPKCS11:
+
+```bash
+go run . sign \
+  --credential-type TOKEN \
+  --credential-content token \
+  --credential-alias assinatura \
+  --pkcs11-config ./pkcs11.cfg \
+  --token-label token-a \
+  --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+  --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+  --certificate-chain '["cert1","cert2"]' \
+  --timestamp "${timestamp}"
+```
+
+Se o provider `SunPKCS11`, o arquivo de configuracao ou o dispositivo nao estiverem
+disponiveis, o assinador retorna erro estruturado `PKCS11.DEVICE-UNAVAILABLE`.
+
 ## CI/CD
 
 O workflow `.github/workflows/assinatura.yml` executa automaticamente em:

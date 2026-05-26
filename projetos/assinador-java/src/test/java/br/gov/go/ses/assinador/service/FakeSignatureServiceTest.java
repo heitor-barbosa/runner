@@ -70,6 +70,25 @@ class FakeSignatureServiceTest {
         assertEquals("FORMAT.BASE64-INVALID", response.getErrorCode());
     }
 
+    @Test
+    void signShouldReturnPkcs11ErrorWhenDeviceIsUnavailable() {
+        FakeSignatureService pkcs11Service = new FakeSignatureService(new Pkcs11ProviderLoader() {
+            @Override
+            public java.security.Provider load(String configPath) {
+                throw new IllegalStateException("simulated unavailable device");
+            }
+        });
+        SignRequest request = buildValidSignRequest();
+        request.setCredentialType("TOKEN");
+        request.setPkcs11ConfigPath("pkcs11.cfg");
+        request.setCredentialAlias("assinatura");
+
+        AssinadorResponse response = pkcs11Service.sign(request);
+
+        assertFalse(response.isSuccess());
+        assertEquals("PKCS11.DEVICE-UNAVAILABLE", response.getErrorCode());
+    }
+
     private SignRequest buildValidSignRequest() {
         SignRequest request = new SignRequest();
         request.setBundle("{\"resourceType\":\"Bundle\",\"entry\":[{}]}");
