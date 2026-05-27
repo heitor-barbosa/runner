@@ -325,8 +325,8 @@
 **Critérios de aceitação:**
 - [x] Projeto CLI `simulador` segue a mesma estrutura do CLI `assinatura`
 - [x] Comandos `start`, `stop` e `status` definidos
-- [ ] Pipeline CI/CD gera binários multiplataforma do CLI `simulador`
-- [ ] Binários publicados no GitHub Releases junto com o CLI `assinatura`
+- [x] Pipeline CI/CD gera binários multiplataforma do CLI `simulador`
+- [x] Binários publicados no GitHub Releases junto com o CLI `assinatura`
 
 ### US-03.4 — Obter simulador.jar dinamicamente
 
