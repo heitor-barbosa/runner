@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -49,6 +50,25 @@ func TestNormalizePortUsesDefaultWhenUnset(t *testing.T) {
 func TestStartServerRejectsNegativeTimeout(t *testing.T) {
 	if _, err := StartServer(8080, -1); err == nil {
 		t.Fatal("expected StartServer to reject negative timeout")
+	}
+}
+
+func TestStartServerFailsClearlyWhenPortIsOccupiedByAnotherProcess(t *testing.T) {
+	useTempHome(t)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen returned error: %v", err)
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	_, err = StartServer(port, 0)
+	if err == nil {
+		t.Fatal("expected StartServer to reject occupied port")
+	}
+	if !strings.Contains(err.Error(), "porta") || !strings.Contains(err.Error(), "indisponivel") {
+		t.Fatalf("error = %q, want clear occupied-port message", err)
 	}
 }
 

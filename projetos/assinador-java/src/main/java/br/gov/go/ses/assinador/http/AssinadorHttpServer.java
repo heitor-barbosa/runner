@@ -29,6 +29,7 @@ public class AssinadorHttpServer implements AutoCloseable {
     private final AtomicLong lastInteractionMillis;
     private final AtomicBoolean stopped;
     private final long timeoutMillis;
+    private final long timeoutCheckIntervalMillis;
     private final Runnable onStop;
 
     private AssinadorHttpServer(
@@ -36,12 +37,14 @@ public class AssinadorHttpServer implements AutoCloseable {
             ExecutorService executor,
             ScheduledExecutorService timeoutExecutor,
             long timeoutMillis,
+            long timeoutCheckIntervalMillis,
             Runnable onStop
     ) {
         this.server = server;
         this.executor = executor;
         this.timeoutExecutor = timeoutExecutor;
         this.timeoutMillis = timeoutMillis;
+        this.timeoutCheckIntervalMillis = timeoutCheckIntervalMillis;
         this.onStop = onStop;
         this.lastInteractionMillis = new AtomicLong(System.currentTimeMillis());
         this.stopped = new AtomicBoolean(false);
@@ -59,21 +62,41 @@ public class AssinadorHttpServer implements AutoCloseable {
         return create(port, 0, null, service);
     }
 
+    static AssinadorHttpServer createForTests(
+            int port,
+            long timeoutMillis,
+            long timeoutCheckIntervalMillis,
+            Runnable onStop
+    ) throws IOException {
+        return create(port, timeoutMillis, timeoutCheckIntervalMillis, onStop, new FakeSignatureService());
+    }
+
     private static AssinadorHttpServer create(
             int port,
             int timeoutMinutes,
             Runnable onStop,
             SignatureService service
     ) throws IOException {
+        long timeoutMillis = timeoutMinutes > 0 ? TimeUnit.MINUTES.toMillis(timeoutMinutes) : 0L;
+        return create(port, timeoutMillis, TimeUnit.MINUTES.toMillis(1), onStop, service);
+    }
+
+    private static AssinadorHttpServer create(
+            int port,
+            long timeoutMillis,
+            long timeoutCheckIntervalMillis,
+            Runnable onStop,
+            SignatureService service
+    ) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         ExecutorService executor = Executors.newCachedThreadPool();
         ScheduledExecutorService timeoutExecutor = Executors.newSingleThreadScheduledExecutor();
-        long timeoutMillis = timeoutMinutes > 0 ? TimeUnit.MINUTES.toMillis(timeoutMinutes) : 0L;
         AssinadorHttpServer assinadorServer = new AssinadorHttpServer(
                 server,
                 executor,
                 timeoutExecutor,
                 timeoutMillis,
+                timeoutCheckIntervalMillis,
                 onStop
         );
         SignatureController controller = new SignatureController(
@@ -121,7 +144,12 @@ public class AssinadorHttpServer implements AutoCloseable {
     public void start() {
         server.start();
         if (timeoutMillis > 0) {
-            timeoutExecutor.scheduleAtFixedRate(this::stopIfIdle, 1, 1, TimeUnit.MINUTES);
+            timeoutExecutor.scheduleAtFixedRate(
+                    this::stopIfIdle,
+                    timeoutCheckIntervalMillis,
+                    timeoutCheckIntervalMillis,
+                    TimeUnit.MILLISECONDS
+            );
         }
     }
 

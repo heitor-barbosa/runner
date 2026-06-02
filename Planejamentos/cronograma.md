@@ -19,5 +19,5 @@
 
 ### Sprint 4 — Simulador e Segurança Final
 
-- Período: 13/05/2026 – 26/05/2026
-- Entrega: 26/05/2026 (terça-feira)
+- Período: 13/05/2026 – 02/06/2026
+- Entrega: 02/06/2026 (terça-feira)
