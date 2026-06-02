@@ -1,0 +1,41 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "Sistema Runner" {
+  [assinatura CLI] as CLI
+  [JDK 21 provisionado] as JDK
+  [assinador.jar (Java)] as AssinadorJar
+  [assinador.jar HTTP Server] as HTTPServer
+}
+
+package "Assinador Java" {
+  [SignRequestValidator] as SignValidator
+  [ValidateRequestValidator] as ValidateValidator
+  [FakeSignatureService] as FakeService
+  [HTTP /sign, /validate, /health] as Endpoints
+}
+
+CLI --> JDK : procura/valida JDK 21
+CLI --> AssinadorJar : executa "java -jar assinador.jar ..."
+CLI --> HTTPServer : POST /sign ou /validate
+HTTPServer --> Endpoints : roteia requisições
+Endpoints --> SignValidator : valida sign request
+Endpoints --> ValidateValidator : valida validate request
+Endpoints --> FakeService : processa operação simulada
+
+JDK --> AssinadorJar : fornece runtime Java
+AssinadorJar --> Endpoints : processa comando local
+HTTPServer --> FakeService : reutiliza mesma lógica de serviço
+
+note left of CLI
+  - Comandos: sign, validate, start, stop, status
+  - Fallback para invocação local se servidor HTTP não estiver disponível
+  - Busca assinador.jar em: executável, ~/.hubsaude/, diretório atual
+end note
+
+note right of JDK
+  - Detecta JAVA_HOME / PATH / ~/.hubsaude/jdk
+  - Baixa JDK 21 quando ausente
+end note
+
+@enduml
