@@ -12,6 +12,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -124,6 +126,24 @@ class SignatureControllerTest {
         assertEquals(200, response.statusCode());
         assertTrue(body.get("success").asBoolean());
         assertEquals("HEALTH.OK", body.get("data").asText());
+    }
+
+    @Test
+    void idleTimeoutShouldRestartAfterEachRequest() throws Exception {
+        server.stop();
+
+        CountDownLatch stopped = new CountDownLatch(1);
+        server = AssinadorHttpServer.createForTests(0, 250, 50, stopped::countDown);
+        server.start();
+        baseUrl = "http://localhost:" + server.getPort();
+
+        for (int index = 0; index < 4; index++) {
+            healthShouldReturnSuccessResponse();
+            Thread.sleep(100);
+        }
+
+        assertFalse(stopped.await(50, TimeUnit.MILLISECONDS));
+        assertTrue(stopped.await(2, TimeUnit.SECONDS));
     }
 
     private HttpResponse<String> post(String path, Object payload) throws Exception {
