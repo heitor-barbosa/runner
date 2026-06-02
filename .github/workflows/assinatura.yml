@@ -43,10 +43,16 @@ jobs:
         run: go test ./...
 
   java:
-    name: Java Tests and Jar
-    runs-on: ubuntu-latest
+    name: Java Tests and Jar (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
 
     steps:
       - name: Checkout
@@ -64,6 +70,7 @@ jobs:
         run: mvn --batch-mode clean verify
 
       - name: Upload assinador.jar
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: assinador-jar
@@ -118,6 +125,29 @@ jobs:
           test -n "${signature_data}"
 
           go run . validate \
+            --signature-data "${signature_data}" \
+            --timestamp "${timestamp}"
+
+      - name: Exercise sign and validate over HTTP
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          set -euo pipefail
+
+          go run . start --port 18080 --timeout 15
+          trap 'go run . stop --port 18080 || true' EXIT
+
+          timestamp="$(date +%s)"
+          sign_output="$(go run . sign --port 18080 \
+            --bundle '{"resourceType":"Bundle","entry":[{}]}' \
+            --provenance '{"resourceType":"Provenance","target":[{"reference":"urn:uuid:abc"}]}' \
+            --credential-content 'test-key' \
+            --certificate-chain '["cert1","cert2"]' \
+            --timestamp "${timestamp}")"
+
+          signature_data="$(printf '%s\n' "${sign_output}" | tail -n 1)"
+          test -n "${signature_data}"
+
+          go run . validate --port 18080 \
             --signature-data "${signature_data}" \
             --timestamp "${timestamp}"
 

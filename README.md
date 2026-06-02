@@ -2,100 +2,110 @@
 
 ## 1. Visão Geral
 
-O **Sistema Runner** é um trabalho prático desenvolvido para a disciplina de **Implementação e Integração de Software** do Bacharelado em Engenharia de Software (2026) da **Universidade Federal de Goiás (UFG)**. Este projeto é de interesse real da **Secretaria de Estado de Saúde de Goiás (SES)** e da UFG, que realizam um esforço conjunto na construção da plataforma **HubSaúde**, voltada à interoperabilidade de dados em saúde.
+O **Sistema Runner** é um trabalho prático desenvolvido para a disciplina de **Implementação e Integração de Software** do Bacharelado em Engenharia de Software da **Universidade Federal de Goiás (UFG)**.
 
-O objetivo principal do sistema é **facilitar a execução de aplicações Java via linha de comandos**, permitindo que usuários utilizem essas aplicações sem a necessidade de conhecer detalhes técnicos de configuração, instalação ou execução do ambiente Java.
+O projeto tem interesse real para a **Secretaria de Estado de Saúde de Goiás (SES-GO)** e para a UFG, no contexto da plataforma **HubSaúde**, voltada à interoperabilidade de dados em saúde.
 
----
+O objetivo principal é facilitar a execução de aplicações Java por linha de comando, permitindo que usuários utilizem essas aplicações sem conhecer detalhes técnicos de configuração, instalação ou execução do ambiente Java.
 
 ## 2. Componentes do Sistema
 
 O Sistema Runner é composto por três elementos principais:
 
-- **Assinatura (CLI)**  
-  Interface de linha de comando, desenvolvida em Go, simples e multiplataforma (Windows, Linux e macOS), responsável por orquestrar a execução das aplicações Java.
-
-- **Assinador (Java)**  
-  Aplicação `assinador.jar` responsável por realizar a **simulação de assinatura digital** e a **validação rigorosa de parâmetros**, conforme especificações definidas.
-
-- **Simulador do HubSaúde**  
-  Aplicação `simulador.jar`, cujo ciclo de vida (iniciar, parar, monitorar) é gerenciado pelo CLI do sistema.
-
----
+- **Assinatura CLI**: CLI em Go responsável por orquestrar a execução do `assinador.jar`.
+- **Assinador Java**: aplicação `assinador.jar`, em Java 21, responsável por simular assinatura digital e validar parâmetros.
+- **Simulador do HubSaúde**: aplicação `simulador.jar`, cujo ciclo de vida será gerenciado por um CLI próprio na Sprint 4.
 
 ## 3. Principais Funcionalidades
 
-### Execução Flexível
-O CLI permite duas formas de invocação do assinador:
-- **Modo Local (CLI)**: execução direta via `java -jar`
-- **Modo Servidor (HTTP)**: comunicação via API HTTP, reduzindo latência
+### Execução flexível
 
-### Provisionamento Automático de JDK
+O CLI `assinatura` permite duas formas de invocação do assinador:
+
+- **Modo local**: execução direta via `java -jar`.
+- **Modo servidor HTTP**: comunicação com o `assinador.jar` via API HTTP.
+
+### Provisionamento automático de JDK
+
 O sistema:
-- Detecta se o Java está instalado
-- Baixa automaticamente o JDK necessário caso não esteja presente
-- Configura o ambiente sem intervenção do usuário
 
-### Simulação de Assinatura Digital
+- detecta se um JDK 21 está disponível;
+- baixa automaticamente o JDK necessário caso não esteja presente;
+- armazena o JDK em `~/.hubsaude/jdk/` para reuso.
+
+### Simulação de assinatura digital
+
 O assinador:
-- Valida rigorosamente os parâmetros de entrada
-- Simula a criação de assinaturas digitais
-- Simula a validação de assinaturas
-- Retorna mensagens claras em caso de erro
 
-### Gerenciamento do Simulador
-O CLI permite:
-- Iniciar o simulador
-- Parar o simulador
-- Consultar status
-- Baixar automaticamente o `simulador.jar` do GitHub Releases
+- valida rigorosamente os parâmetros de entrada;
+- simula a criação de assinaturas digitais;
+- simula a validação de assinaturas;
+- retorna mensagens estruturadas em caso de erro.
 
-### Segurança e Integridade
-- Binários distribuídos com **checksums SHA256**
-- Assinatura criptográfica via **Cosign (Sigstore)**
-- Garantia de autenticidade e integridade dos artefatos
+### Modo servidor do assinador
 
----
+O CLI `assinatura`:
+
+- inicia o `assinador.jar` em modo servidor com `assinatura start`;
+- reutiliza instância ativa quando o health check responde;
+- invoca `/sign` e `/validate` por HTTP quando o servidor está disponível;
+- permite fallback para modo local;
+- encerra instância registrada com `assinatura stop`;
+- permite timeout automático por inatividade com `--timeout`.
+
+### Segurança e integridade
+
+O pipeline de release gera:
+
+- binários multiplataforma;
+- `assinador.jar`;
+- checksums SHA-256;
+- assinaturas Cosign com Sigstore.
 
 ## 4. Arquitetura do Sistema
-```bash
-Usuário
-↓
-CLI (assinatura / simulador)
-↓
-Assinador (Java)
-↓
-Resposta (assinatura ou validação)
-```
 
----
+```text
+Usuário
+  |
+  v
+CLI assinatura / simulador
+  |
+  v
+Aplicações Java
+  |
+  v
+Resposta ao usuário
+```
 
 ## 5. Estado Atual
 
 Até a Sprint 3, o projeto já entrega:
 
-- CLI `assinatura` com comandos `version`, `sign` e `validate`
-- `assinador.jar` em Java 21 com simulação de assinatura e validação
-- Invocação local do Java via `java -jar`
-- Invocação HTTP para `sign` e `validate` quando o servidor está ativo
-- Comando `assinatura start` para iniciar/reutilizar o servidor HTTP
-- Validação de parâmetros e mensagens de erro estruturadas
-- Detecção/provisionamento automático de JDK 21
-- Testes Go, testes Java e integração CLI → JAR/HTTP no CI
+- CLI `assinatura` com comandos `version`, `sign`, `validate`, `start` e `stop`;
+- `assinador.jar` em Java 21 com simulação de assinatura e validação;
+- invocação local do Java via `java -jar`;
+- invocação HTTP para `sign` e `validate` quando o servidor está ativo;
+- comando `assinatura start` para iniciar ou reutilizar o servidor HTTP;
+- comando `assinatura stop` para encerrar uma instância registrada;
+- timeout automático por inatividade via `assinatura start --timeout <minutos>`;
+- health check HTTP em `/health`;
+- validação de parâmetros e mensagens de erro estruturadas;
+- suporte simulado a material criptográfico via PKCS#11;
+- detecção e provisionamento automático de JDK 21;
+- testes Go, testes Java e integração CLI -> JAR/HTTP no CI.
 
-Ficam para as próximas sprints:
+Ficam para a Sprint 4:
 
-- Comando `assinatura stop`
-- Timeout automático por inatividade
-- Integração com material criptográfico e simulador dedicado
-
----
+- implementação real do ciclo de vida do CLI `simulador`;
+- download/cache do `simulador.jar`;
+- health check/readiness do Simulador do HubSaúde;
+- publicação do binário `simulador` junto aos artefatos de release.
 
 ## 6. Como Usar
 
-Os fluxos das sprints estão documentados em `StatusSprints/` e o uso do CLI em `projetos/assinador/README.md`.
+Os fluxos das sprints estão documentados em `StatusSprints/`, e o uso detalhado do CLI está em `projetos/assinador/README.md`.
 
-Resumo do uso:
+Resumo do fluxo local:
 
 ```bash
 assinatura sign \
@@ -110,28 +120,35 @@ assinatura validate \
   --timestamp <mesmo-timestamp-usado-no-sign>
 ```
 
-Para uso via release, o usuario precisa baixar o binario `assinatura` da sua plataforma
-e o arquivo `assinador.jar`, mantendo ambos na mesma pasta.
+Para iniciar o `assinador.jar` em modo servidor HTTP:
+
+```bash
+assinatura start --port 8080 --timeout 15
+```
+
+Com o servidor ativo, `sign` e `validate` usam HTTP por padrão. Para encerrar:
+
+```bash
+assinatura stop --port 8080
+```
+
+Para uso via release, o usuário precisa baixar o binário `assinatura` da sua plataforma e o arquivo `assinador.jar`, mantendo ambos na mesma pasta.
+
 ## 7. Contexto Acadêmico
 
 | Campo | Informação |
-|------|--------|
+| --- | --- |
 | Instituição | Universidade Federal de Goiás (UFG) |
 | Unidade | Instituto de Informática |
 | Curso | Bacharelado em Engenharia de Software |
-| Disciplina | Implementação e Integração de Software (INF0466) |
-| Professor | Fabio Nogueira de Lucena |
+| Disciplina | Implementação e Integração de Software |
 | Semestre | 2026/1 |
 
----
+## 8. Equipe
 
-## 11. Equipe
-
-- Brenner Rodrigues Sardinha  
+- Brenner Rodrigues Sardinha
 - Heitor Barbosa Souza
 
----
+## 9. Observações
 
-## 12. Observações
-
-Este projeto **não implementa criptografia real**, focando exclusivamente na **simulação e validação de parâmetros**, conforme definido no escopo da disciplina.
+Este projeto **não implementa criptografia real**. O foco é simulação, integração, validação de parâmetros e gestão de execução conforme o escopo da disciplina.

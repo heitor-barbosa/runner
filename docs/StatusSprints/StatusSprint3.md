@@ -1,73 +1,88 @@
 # Status da Sprint 3
+## Situação
 
-## Situacao
+A Sprint 3 está funcionalmente concluída nos fluxos principais do `assinador.jar` em modo servidor.
 
-A Sprint 3 esta parcialmente concluida.
+O estado real atual é: o servidor HTTP do `assinador.jar` existe, o CLI consegue iniciar, reutilizar e parar uma instância ativa, e os comandos `sign` e `validate` usam HTTP quando o servidor está disponível, com fallback para modo local. Também existe suporte simulado a PKCS#11 e timeout por inatividade.
 
-O estado real atual e: o servidor HTTP do `assinador.jar` existe, o CLI consegue iniciar e reutilizar uma instancia ativa, e os comandos `sign` e `validate` ja usam HTTP quando o servidor esta disponivel, com fallback para modo local. Ainda faltam `stop`, timeout por inatividade e integracao PKCS#11.
+Ainda há pontos que merecem reforço para aderir melhor aos critérios de aceitação gerais: testes mais fortes para porta ocupada, race no start, reinício do timer de inatividade, execução Java em Windows no CI e integração PKCS#11 mais próxima de um simulador real como SoftHSM2.
 
-## Historias concluidas
+## Histórias concluídas
 
-### US-02.4 - Endpoints HTTP do assinador.jar
+### US-02.4 - Endpoints HTTP do `assinador.jar`
 
 - [x] `SignatureController` implementado com `POST /sign` e `POST /validate`.
 - [x] Endpoints reutilizam `FakeSignatureService`, `SignRequestValidator` e `ValidateRequestValidator`.
 - [x] Respostas HTTP seguem a estrutura `success`, `data`, `errorCode` e `errorMessage`.
-- [x] Testes de integracao validam sucesso, falha de validacao e metodo HTTP invalido.
+- [x] Endpoint `/health` implementado para health check.
+- [x] Testes de integração validam sucesso, falha de validação, método HTTP inválido e health check.
 
-### US-01.5 - Iniciar assinador.jar no modo servidor
+### US-01.5 - Iniciar `assinador.jar` no modo servidor
 
 - [x] Comando `assinatura start` inicia o `assinador.jar` em background.
-- [x] Porta padrao `8080` suportada.
+- [x] Porta padrão `8080` suportada.
 - [x] PID, porta, caminho do Java e caminho do JAR registrados em `~/.hubsaude/`.
-- [x] Feedback exibido ao usuario quando o servidor inicia ou quando uma instancia ativa e reutilizada.
-- [x] Parametro `--port` permite personalizar a porta.
+- [x] Feedback exibido ao usuário quando o servidor inicia ou quando uma instância ativa é reutilizada.
+- [x] Parâmetro `--port` permite personalizar a porta.
+- [+] Falha por porta ocupada existe indiretamente pelo processo Java, mas ainda precisa de teste específico.
 
-### US-01.6 - Invocar assinador.jar via HTTP
+### US-01.6 - Invocar `assinador.jar` via HTTP
 
-- [x] CLI envia requisicoes HTTP para `/sign` e `/validate`.
-- [x] Modo servidor e usado por padrao quando ha instancia ativa.
-- [x] Fallback automatico para modo local quando o servidor nao esta disponivel.
-- [x] Flag `--local` permite forcar a invocacao via `java -jar`.
-- [x] Testes cobrem HTTP ativo, fallback local e bypass do HTTP com `--local`.
+- [x] CLI envia requisições HTTP para `/sign` e `/validate`.
+- [x] Modo servidor é usado por padrão quando há instância ativa.
+- [x] Fallback automático para modo local quando o servidor não está disponível.
+- [x] Flag `--local` permite forçar a invocação via `java -jar`.
+- [x] Testes Go cobrem HTTP ativo, fallback local e bypass do HTTP com `--local`.
+- [+] O CI exercita integração local CLI -> JAR, mas ainda pode reforçar integração HTTP real CLI -> JAR.
 
-### US-01.7 - Detectar instancia do assinador.jar em execucao
+### US-01.7 - Detectar instância do `assinador.jar` em execução
 
 - [x] CLI consulta o estado em `~/.hubsaude/`.
-- [x] Health check HTTP em `/health` confirma se a instancia responde.
-- [x] Instancia ativa e reutilizada pelo `start`.
-- [x] Registro sem resposta e tratado como inativo no fluxo de inicializacao.
+- [x] Health check HTTP em `/health` confirma se a instância responde.
+- [x] Instância ativa é reutilizada pelo `start`.
+- [x] Registro sem resposta é tratado como inativo no fluxo de inicialização.
+- [+] Ainda falta teste específico para condição de corrida durante start simultâneo.
 
-## Historias pendentes
+### US-01.8 - Interromper execução do `assinador.jar`
 
-### US-01.8 - Interromper execucao do assinador.jar
-
-- [ ] Comando `assinatura stop`.
-- [ ] Parametro `--port` para escolher a porta a encerrar.
-- [ ] Feedback de encerramento.
-- [ ] Atualizacao/remocao do registro em `~/.hubsaude/`.
+- [x] Comando `assinatura stop` implementado.
+- [x] Parâmetro `--port` permite escolher a porta a encerrar.
+- [x] Feedback de encerramento exibido ao usuário.
+- [x] Registro em `~/.hubsaude/` é removido após encerramento.
+- [x] Teste Go cobre encerramento de processo registrado e remoção do estado.
+- [+] O encerramento atual usa PID salvo e `Kill`; não há endpoint HTTP de shutdown controlado.
 
 ### US-01.9 - Timeout por inatividade
 
-- [ ] Parametro `--timeout <minutos>`.
-- [ ] Encerramento automatico apos periodo sem requisicoes.
-- [ ] Documentacao do timeout no help do CLI.
+- [x] Parâmetro `--timeout <minutos>` implementado no comando `assinatura start`.
+- [x] Servidor Java recebe o timeout e encerra após período sem requisições.
+- [x] O servidor atualiza a última interação em `/health`, `/sign` e `/validate`.
+- [x] Mecanismo de timeout está documentado no help/comando e no README do módulo `assinador`.
+- [+] Ainda falta teste específico comprovando que o timer reinicia a cada requisição.
 
-### US-02.5 - Integracao PKCS#11
+### US-02.5 - Integração PKCS#11
 
-- [ ] Integracao com `SunPKCS11`.
-- [ ] Testes com SoftHSM2 ou simulador equivalente.
-- [ ] Mensagem clara quando dispositivo criptografico nao esta disponivel.
-- [ ] Documentacao de setup para token/smart card.
+- [x] Suporte a credenciais `TOKEN` e `SMARTCARD` no fluxo de assinatura.
+- [x] Integração com provider PKCS#11 por `Pkcs11ProviderLoader`.
+- [x] Mensagem estruturada para indisponibilidade de dispositivo: `PKCS11.DEVICE-UNAVAILABLE`.
+- [x] Teste de integração cobre uso de provider PKCS#11 simulado.
+- [x] Documentação do uso com `--pkcs11-config` e `--token-label` existe no README do módulo `assinador`.
+- [+] O teste atual usa um provider simulado em memória; ainda não comprova execução com SoftHSM2 real.
 
-## Resultado entregue ate agora
+## Resultado entregue
 
 - `assinador.jar` funcionando em modo servidor HTTP.
 - Endpoints `/health`, `/sign` e `/validate`.
 - `assinatura start` com registro de estado em `~/.hubsaude/`.
-- Reuso de instancia ativa por health check.
-- `assinatura sign` e `assinatura validate` usando HTTP quando possivel.
+- Reuso de instância ativa por health check.
+- `assinatura sign` e `assinatura validate` usando HTTP quando possível.
 - Fallback para modo local e flag `--local`.
+- `assinatura stop` para encerrar instância registrada.
+- Timeout por inatividade configurável com `--timeout`.
+- Suporte simulado a PKCS#11 para `TOKEN` e `SMARTCARD`.
+- Testes Go para comandos, runner e JDK.
+- Testes Java versionados para validação, HTTP, assinatura fake e PKCS#11 simulado.
+- CI com testes Go em Linux, Windows e macOS, testes Java em Ubuntu, integração local CLI -> JAR, build multiplataforma e release.
 
 ## Como validar localmente
 
@@ -105,7 +120,7 @@ Copy-Item target\assinador.jar ..\assinador\assinador.jar
 
 ```bash
 cd ../assinador
-go run . start --port 8080
+go run . start --port 8080 --timeout 15
 ```
 
 ### 5. Executar assinatura usando HTTP quando servidor estiver ativo
@@ -121,7 +136,7 @@ go run . sign --port 8080 \
   --timestamp "${timestamp}"
 ```
 
-### 6. Executar validacao usando HTTP quando servidor estiver ativo
+### 6. Executar validação usando HTTP quando servidor estiver ativo
 
 ```bash
 go run . validate --port 8080 \
@@ -129,4 +144,12 @@ go run . validate --port 8080 \
   --timestamp "${timestamp}"
 ```
 
-Para confirmar o fallback local, pare o processo Java manualmente e execute os mesmos comandos, ou use `--local` para forcar o modo local.
+### 7. Encerrar o servidor pelo CLI
+
+```bash
+go run . stop --port 8080
+```
+
+Para confirmar o fallback local, pare o servidor e execute os mesmos comandos, ou use `--local` para forçar o modo local.
+irmar o fallback local, pare o processo Java manualmente e execute os mesmos comandos, ou use `--local` para forcar o modo local.
+irmar o fallback local, pare o processo Java manualmente e execute os mesmos comandos, ou use `--local` para forcar o modo local.
