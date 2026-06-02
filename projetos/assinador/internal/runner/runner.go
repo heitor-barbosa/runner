@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -79,6 +80,10 @@ func StartServer(port int, timeoutMinutes int) (*ServerState, error) {
 
 	if isServerActive(port) {
 		return &ServerState{Port: port, Reused: true}, nil
+	}
+
+	if !isPortAvailable(port) {
+		return nil, fmt.Errorf("porta %d indisponivel: outro processo esta usando a porta e nao responde ao health check do assinador.jar", port)
 	}
 
 	javaPath, err := findJava()
@@ -356,6 +361,15 @@ func isServerActive(port int) bool {
 	}
 	defer resp.Body.Close()
 	return resp.StatusCode == http.StatusOK
+}
+
+func isPortAvailable(port int) bool {
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", normalizePort(port)))
+	if err != nil {
+		return false
+	}
+	_ = listener.Close()
+	return true
 }
 
 func readServerState(port int) (*ServerState, error) {
