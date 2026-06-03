@@ -1,0 +1,29 @@
+@startuml
+actor Usuário
+participant "assinatura CLI" as CLI
+participant "JDK 21" as JDK
+participant "assinador.jar (local)" as LocalJar
+participant "assinador.jar HTTP" as HTTPServer
+participant "ValidateRequestValidator" as ValidateValidator
+participant "FakeSignatureService" as FakeService
+
+Usuário -> CLI : assinatura validate --signature-data ... --timestamp ...
+CLI -> CLI : valida parâmetros obrigatórios
+CLI -> JDK : findJava()
+JDK --> CLI : caminho java ou instalação automática
+CLI -> CLI : verifica servidor HTTP ativo em 127.0.0.1:8080
+alt servidor HTTP disponível
+  CLI -> HTTPServer : POST /validate {json payload}
+  HTTPServer -> ValidateValidator : valida entrada
+  ValidateValidator -> FakeService : solicita validação simulada
+  FakeService --> HTTPServer : AssinadorResponse(success)
+  HTTPServer --> CLI : 200 OK + JSON
+else servidor HTTP indisponível
+  CLI -> LocalJar : java -jar assinador.jar validate --json '{...}'
+  LocalJar -> ValidateValidator : valida entrada
+  ValidateValidator -> FakeService : solicita validação simulada
+  FakeService --> LocalJar : AssinadorResponse(success)
+  LocalJar --> CLI : stdout JSON
+end
+CLI -> Usuário : exibe resultado ou erro
+@enduml
