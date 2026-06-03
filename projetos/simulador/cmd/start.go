@@ -3,26 +3,46 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/artifact"
 	"github.com/spf13/cobra"
 )
 
-var startPort int
+var (
+	startPort   int
+	startSource string
+)
 
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Inicia o simulador.jar",
-	Long: `Inicia o simulador.jar em background.
+	Long: `Prepara a inicializacao do simulador.jar.
 
-Esta estrutura inicial registra o comando no CLI. A inicializacao real do processo,
-validacao de portas e download automatico serao implementados nas proximas historias.`,
-	Run: runStart,
+O comando localiza o simulador.jar nos caminhos esperados ou baixa o artefato
+para ~/.hubsaude/ quando uma URL for informada por --source.`,
+	RunE: runStart,
 }
 
 func init() {
 	rootCmd.AddCommand(startCmd)
 	startCmd.Flags().IntVar(&startPort, "port", 8081, "Porta do Simulador do HubSaude")
+	startCmd.Flags().StringVar(&startSource, "source", "", "URL para baixar o simulador.jar quando ele nao existir localmente")
 }
 
-func runStart(cmd *cobra.Command, args []string) {
-	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador start registrado para a porta %d\n", startPort)
+func runStart(cmd *cobra.Command, args []string) error {
+	jar, err := artifact.ResolveLocalJar()
+	if err != nil {
+		if startSource == "" {
+			return err
+		}
+		jar, err = artifact.DownloadJar(startSource)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar baixado para %s\n", jar.Path)
+	} else {
+		fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar encontrado em %s\n", jar.Path)
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador start preparado para a porta %d\n", startPort)
+	return nil
 }
