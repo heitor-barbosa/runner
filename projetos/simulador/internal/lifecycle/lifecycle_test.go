@@ -102,3 +102,89 @@ func TestStartSimulatorWritesStateAndStartsCommand(t *testing.T) {
 		t.Fatalf("expected state file to contain port 8082, got %s", content)
 	}
 }
+
+func TestStatusSimulatorReportsActiveProcess(t *testing.T) {
+	tmpHome := t.TempDir()
+	oldHome := userHomeDir
+	oldProcessActive := processActive
+	userHomeDir = func() (string, error) { return tmpHome, nil }
+	processActive = func(pid int) bool { return pid == 1234 }
+	defer func() {
+		userHomeDir = oldHome
+		processActive = oldProcessActive
+	}()
+
+	state := &SimulatorState{
+		PID:       1234,
+		Port:      8083,
+		JarPath:   "/tmp/simulador.jar",
+		StartedAt: time.Now().UTC(),
+	}
+	if err := writeSimulatorState(state); err != nil {
+		t.Fatalf("expected writeSimulatorState to succeed, got %v", err)
+	}
+
+	status, err := StatusSimulator(8083)
+	if err != nil {
+		t.Fatalf("expected StatusSimulator to succeed, got %v", err)
+	}
+	if !status.Active {
+		t.Fatalf("expected simulator to be active, got %+v", status)
+	}
+	if status.State == nil || status.State.PID != state.PID {
+		t.Fatalf("expected state PID %d, got %+v", state.PID, status.State)
+	}
+}
+
+func TestStatusSimulatorReportsMissingStateAsInactive(t *testing.T) {
+	tmpHome := t.TempDir()
+	oldHome := userHomeDir
+	userHomeDir = func() (string, error) { return tmpHome, nil }
+	defer func() { userHomeDir = oldHome }()
+
+	status, err := StatusSimulator(8084)
+	if err != nil {
+		t.Fatalf("expected StatusSimulator to succeed, got %v", err)
+	}
+	if status.Active {
+		t.Fatalf("expected simulator to be inactive, got %+v", status)
+	}
+	if status.State != nil {
+		t.Fatalf("expected no state for missing registration, got %+v", status.State)
+	}
+}
+
+func TestStopSimulatorKillsProcessAndRemovesState(t *testing.T) {
+	tmpHome := t.TempDir()
+	oldHome := userHomeDir
+	oldCommand := newCommand
+	userHomeDir = func() (string, error) { return tmpHome, nil }
+	newCommand = fakeCommand
+	defer func() {
+		userHomeDir = oldHome
+		newCommand = oldCommand
+	}()
+
+	state, err := StartSimulator("/tmp/simulador.jar", 8085)
+	if err != nil {
+		t.Fatalf("expected StartSimulator to succeed, got %v", err)
+	}
+	defer func() {
+		proc, err := os.FindProcess(state.PID)
+		if err == nil {
+			_ = proc.Kill()
+		}
+	}()
+
+	stopped, err := StopSimulator(8085)
+	if err != nil {
+		t.Fatalf("expected StopSimulator to succeed, got %v", err)
+	}
+	if stopped.PID != state.PID {
+		t.Fatalf("expected stopped PID %d, got %d", state.PID, stopped.PID)
+	}
+
+	if _, err := os.Stat(simulatorStatePath(8085)); !os.IsNotExist(err) {
+		t.Fatalf("expected state file to be removed, got %v", err)
+	}
+}
