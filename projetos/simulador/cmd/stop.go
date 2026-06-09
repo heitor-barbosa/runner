@@ -3,19 +3,23 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
 	"github.com/spf13/cobra"
 )
 
-var stopPort int
+var (
+	stopPort          int
+	stopSimulatorFunc = lifecycle.StopSimulator
+)
 
 var stopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Interrompe o simulador.jar",
 	Long: `Interrompe a instancia registrada do simulador.jar.
 
-Esta estrutura inicial registra o comando no CLI. O encerramento real do processo
-sera implementado na historia de controle de ciclo de vida do Simulador.`,
-	Run: runStop,
+O comando usa o PID salvo em ~/.hubsaude para encerrar o processo da porta
+informada e remove o arquivo de estado local apos o encerramento.`,
+	RunE: runStop,
 }
 
 func init() {
@@ -23,6 +27,12 @@ func init() {
 	stopCmd.Flags().IntVar(&stopPort, "port", 8081, "Porta do Simulador do HubSaude")
 }
 
-func runStop(cmd *cobra.Command, args []string) {
-	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador stop registrado para a porta %d\n", stopPort)
+func runStop(cmd *cobra.Command, args []string) error {
+	state, err := stopSimulatorFunc(stopPort)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(cmd.OutOrStdout(), "Simulador encerrado na porta %d (PID %d)\n", state.Port, state.PID)
+	return nil
 }

@@ -311,10 +311,10 @@
 **para que** eu tenha visibilidade e controle sobre o ciclo de vida do Simulador.
 
 **Critérios de aceitação:**
-- [ ] Comando `simulador stop` encerra o Simulador
-- [ ] Comando `simulador status` exibe se o Simulador está em execução ou não
-- [ ] Informações de processo (PID, porta) são registradas em `~/.hubsaude/`
-- [ ] Encerramento limpo do processo com tratamento adequado de erros
+- [x] Comando `simulador stop` encerra o Simulador
+- [x] Comando `simulador status` exibe se o Simulador está em execução ou não
+- [x] Informações de processo (PID, porta) são registradas em `~/.hubsaude/`
+- [x] Encerramento limpo do processo com tratamento adequado de erros
 
 ### US-03.3 — Estrutura base do CLI "simulador" em Go
 

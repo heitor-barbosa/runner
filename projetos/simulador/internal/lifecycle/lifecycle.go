@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,6 +17,8 @@ const defaultPort = 8081
 
 var userHomeDir = os.UserHomeDir
 var newCommand = exec.Command
+var findProcess = os.FindProcess
+var processActive = defaultProcessActive
 
 // SimulatorState representa o estado do simulador iniciado pelo CLI.
 type SimulatorState struct {
@@ -22,6 +26,13 @@ type SimulatorState struct {
 	Port      int       `json:"port"`
 	JarPath   string    `json:"jarPath"`
 	StartedAt time.Time `json:"startedAt"`
+}
+
+// SimulatorStatus representa a visibilidade atual do processo registrado.
+type SimulatorStatus struct {
+	State   *SimulatorState
+	Active  bool
+	Message string
 }
 
 // StartSimulator inicia o simulador.jar em segundo plano e grava o PID/porta em ~/.hubsaude/.
@@ -68,6 +79,57 @@ func StartSimulator(jarPath string, port int) (*SimulatorState, error) {
 	return state, nil
 }
 
+// StatusSimulator consulta o registro local e confirma se o processo ainda existe.
+func StatusSimulator(port int) (*SimulatorStatus, error) {
+	state, err := readSimulatorState(port)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &SimulatorStatus{
+				Active:  false,
+				Message: fmt.Sprintf("Simulador nao esta em execucao na porta %d", normalizePort(port)),
+			}, nil
+		}
+		return nil, err
+	}
+
+	active := processActive(state.PID)
+	status := &SimulatorStatus{State: state, Active: active}
+	if active {
+		status.Message = fmt.Sprintf("Simulador em execucao na porta %d (PID %d)", state.Port, state.PID)
+		return status, nil
+	}
+
+	status.Message = fmt.Sprintf("Simulador registrado na porta %d nao esta ativo (PID %d)", state.Port, state.PID)
+	return status, nil
+}
+
+// StopSimulator encerra o processo registrado e remove o estado local.
+func StopSimulator(port int) (*SimulatorState, error) {
+	state, err := readSimulatorState(port)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("simulador nao esta registrado na porta %d", normalizePort(port))
+		}
+		return nil, err
+	}
+
+	process, err := findProcess(state.PID)
+	if err != nil {
+		_ = removeSimulatorState(state.Port)
+		return nil, fmt.Errorf("falha ao localizar processo do simulador (PID %d): %w", state.PID, err)
+	}
+
+	if err := process.Kill(); err != nil {
+		_ = removeSimulatorState(state.Port)
+		return nil, fmt.Errorf("falha ao encerrar simulador (PID %d): %w", state.PID, err)
+	}
+
+	if err := removeSimulatorState(state.Port); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	return state, nil
+}
+
 func normalizePort(port int) int {
 	if port <= 0 {
 		return defaultPort
@@ -102,6 +164,42 @@ func writeSimulatorState(state *SimulatorState) error {
 		return fmt.Errorf("falha ao gravar estado do simulador: %w", err)
 	}
 	return nil
+}
+
+func readSimulatorState(port int) (*SimulatorState, error) {
+	data, err := os.ReadFile(simulatorStatePath(port))
+	if err != nil {
+		return nil, err
+	}
+
+	var state SimulatorState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return nil, fmt.Errorf("falha ao ler estado do simulador: %w", err)
+	}
+	return &state, nil
+}
+
+func removeSimulatorState(port int) error {
+	if err := os.Remove(simulatorStatePath(port)); err != nil {
+		return fmt.Errorf("falha ao remover estado do simulador: %w", err)
+	}
+	return nil
+}
+
+func defaultProcessActive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+
+	if runtime.GOOS == "windows" {
+		output, err := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH").Output()
+		if err != nil {
+			return false
+		}
+		return strings.Contains(string(output), strconv.Itoa(pid))
+	}
+
+	return exec.Command("kill", "-0", strconv.Itoa(pid)).Run() == nil
 }
 
 func simulatorStatePath(port int) string {
