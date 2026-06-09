@@ -4,14 +4,16 @@ import (
 	"fmt"
 
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/artifact"
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
 	"github.com/spf13/cobra"
 )
 
 var (
-	startPort       int
-	startSource     string
-	resolveJarFunc  = artifact.ResolveJarWithFallback
-	downloadJarFunc = artifact.DownloadJar
+	startPort          int
+	startSource        string
+	resolveJarFunc     = artifact.ResolveJarWithFallback
+	downloadJarFunc    = artifact.DownloadJar
+	startSimulatorFunc = lifecycle.StartSimulator
 )
 
 var startCmd = &cobra.Command{
@@ -52,6 +54,11 @@ func runStart(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar encontrado em %s\n", jar.Path)
 	}
 
+	state, err := startSimulatorFunc(jar.Path, startPort)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar iniciado em PID %d na porta %d\n", state.PID, state.Port)
 	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador start preparado para a porta %d\n", startPort)
 	return nil
 }
