@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -95,7 +96,7 @@ func DownloadJarFromRelease() (*JarResult, error) {
 
 // VerifyChecksum verifies a downloaded file against a SHA256 checksum
 func VerifyChecksum(filePath string, expectedHash string) error {
-	file, err := io.ReadFile(filePath)
+	file, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("falha ao ler arquivo para verificacao de checksum: %w", err)
 	}
