@@ -46,6 +46,17 @@ func ResolveLocalJar() (*JarResult, error) {
 	return nil, fmt.Errorf("%s nao encontrado", jarName)
 }
 
+// ResolveJarWithFallback attempts to resolve JAR locally, then falls back to GitHub Releases
+func ResolveJarWithFallback() (*JarResult, error) {
+	// Try local resolution first
+	if jar, err := ResolveLocalJar(); err == nil {
+		return jar, nil
+	}
+
+	// Fall back to GitHub Releases
+	return DownloadAndVerifyJarFromRelease()
+}
+
 func downloadToFile(sourceURL string, destination string) error {
 	client := &http.Client{Timeout: 30 * time.Second}
 	response, err := client.Get(sourceURL)
