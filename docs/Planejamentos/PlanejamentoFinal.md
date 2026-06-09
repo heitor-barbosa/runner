@@ -341,7 +341,7 @@
 - [x] Versão já baixada não é baixada novamente (cache local em `~/.hubsaude/`)
 - [x] Verificação de integridade do download (checksum)
 
-- [ ] Checksum SHA-256 e Sigstore Cosign incorporados no fluxo (US-05.3)
+- [x] Checksum SHA-256 e Sigstore Cosign incorporados no fluxo (US-05.3)
 
 ---
 **Ordem de Implementação**

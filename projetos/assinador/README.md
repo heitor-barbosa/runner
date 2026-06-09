@@ -195,8 +195,9 @@ git push origin v0.1.0
 
 Ao receber a tag, o workflow cria uma GitHub Release com:
 
-- binarios multiplataforma;
+- binarios multiplataforma dos CLIs `assinatura` e `simulador`;
 - `assinador.jar`;
+- `simulador.jar`, quando o artefato estiver disponivel para publicacao;
 - `SHA256SUMS.txt`;
 - arquivos `.sig` gerados pelo Cosign;
 - arquivos `.pem` gerados pelo Cosign.

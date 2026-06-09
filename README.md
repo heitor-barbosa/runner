@@ -59,6 +59,7 @@ O pipeline de release gera:
 
 - binários multiplataforma;
 - `assinador.jar`;
+- `simulador.jar`, quando o artefato estiver disponível para publicação;
 - checksums SHA-256;
 - assinaturas Cosign com Sigstore.
 
@@ -94,11 +95,11 @@ Até a Sprint 3, o projeto já entrega:
 - detecção e provisionamento automático de JDK 21;
 - testes Go, testes Java e integração CLI -> JAR/HTTP no CI.
 
-Ficam para a Sprint 4:
+Na Sprint 4, o projeto entrega:
 
 - implementação real do ciclo de vida do CLI `simulador`;
 - download/cache do `simulador.jar`;
-- health check/readiness do Simulador do HubSaúde;
+- verificação de checksum SHA-256 e assinatura Cosign no download do `simulador.jar`;
 - publicação do binário `simulador` junto aos artefatos de release.
 
 ## 6. Como Usar

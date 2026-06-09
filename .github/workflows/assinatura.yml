@@ -258,6 +258,9 @@ jobs:
       id-token: write
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download binaries
         uses: actions/download-artifact@v4
         with:
@@ -269,6 +272,13 @@ jobs:
           name: assinador-jar
           path: release
 
+      - name: Download simulador.jar if available
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: simulador-jar
+          path: release
+
       - name: Prepare release files
         run: |
           set -euo pipefail
@@ -276,8 +286,14 @@ jobs:
           mkdir -p release
           find artifacts -type f \( -name "assinatura-*" -o -name "simulador-*" \) -exec cp {} release/ \;
 
+          for candidate in simulador.jar projetos/simulador/simulador.jar; do
+            if [[ -f "${candidate}" && ! -f release/simulador.jar ]]; then
+              cp "${candidate}" release/simulador.jar
+            fi
+          done
+
           cd release
-          sha256sum assinatura-* simulador-* assinador.jar > SHA256SUMS.txt
+          sha256sum assinatura-* simulador-* *.jar > SHA256SUMS.txt
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.2
@@ -287,7 +303,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          for file in assinatura-* simulador-* assinador.jar; do
+          for file in assinatura-* simulador-* *.jar; do
             cosign sign-blob --yes \
               --output-signature "${file}.sig" \
               --output-certificate "${file}.pem" \
