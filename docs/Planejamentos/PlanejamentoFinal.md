@@ -299,10 +299,10 @@
 **para que** eu possa gerenciá-lo sem conhecer os comandos Java subjacentes.
 
 **Critérios de aceitação:**
-- [ ] Comando `simulador start` inicia o simulador.jar
-- [ ] CLI verifica se as portas necessárias estão disponíveis antes de iniciar
-- [ ] Se o simulador.jar não estiver disponível localmente, é baixado automaticamente (ver US-03.4)
-- [ ] Feedback exibido ao usuário sobre o status de inicialização
+- [x] Comando `simulador start` inicia o simulador.jar
+- [x] CLI verifica se as portas necessárias estão disponíveis antes de iniciar
+- [x] Se o simulador.jar não estiver disponível localmente, é baixado automaticamente (ver US-03.4)
+- [x] Feedback exibido ao usuário sobre o status de inicialização
 
 ### US-03.2 — Parar e monitorar o Simulador
 
@@ -311,10 +311,10 @@
 **para que** eu tenha visibilidade e controle sobre o ciclo de vida do Simulador.
 
 **Critérios de aceitação:**
-- [ ] Comando `simulador stop` encerra o Simulador
-- [ ] Comando `simulador status` exibe se o Simulador está em execução ou não
-- [ ] Informações de processo (PID, porta) são registradas em `~/.hubsaude/`
-- [ ] Encerramento limpo do processo com tratamento adequado de erros
+- [x] Comando `simulador stop` encerra o Simulador
+- [x] Comando `simulador status` exibe se o Simulador está em execução ou não
+- [x] Informações de processo (PID, porta) são registradas em `~/.hubsaude/`
+- [x] Encerramento limpo do processo com tratamento adequado de erros
 
 ### US-03.3 — Estrutura base do CLI "simulador" em Go
 
@@ -335,13 +335,13 @@
 **para que** eu sempre utilize a versão atualizada sem necessidade de download manual.
 
 **Critérios de aceitação:**
-- [ ] CLI consulta GitHub Releases para identificar a versão mais recente do simulador.jar
-- [ ] Download automático quando simulador.jar não está disponível localmente
-- [ ] Opção `--source <url>` permite indicar URL alternativa para download
-- [ ] Versão já baixada não é baixada novamente (cache local em `~/.hubsaude/`)
-- [ ] Verificação de integridade do download (checksum)
+- [x] CLI consulta GitHub Releases para identificar a versão mais recente do simulador.jar
+- [x] Download automático quando simulador.jar não está disponível localmente
+- [x] Opção `--source <url>` permite indicar URL alternativa para download
+- [x] Versão já baixada não é baixada novamente (cache local em `~/.hubsaude/`)
+- [x] Verificação de integridade do download (checksum)
 
-- [ ] Checksum SHA-256 e Sigstore Cosign incorporados no fluxo (US-05.3)
+- [x] Checksum SHA-256 e Sigstore Cosign incorporados no fluxo (US-05.3)
 
 ---
 **Ordem de Implementação**

@@ -4,12 +4,16 @@ import (
 	"fmt"
 
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/artifact"
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
 	"github.com/spf13/cobra"
 )
 
 var (
-	startPort   int
-	startSource string
+	startPort          int
+	startSource        string
+	resolveJarFunc     = artifact.ResolveJarWithFallback
+	downloadJarFunc    = artifact.DownloadJar
+	startSimulatorFunc = lifecycle.StartSimulator
 )
 
 var startCmd = &cobra.Command{
@@ -18,7 +22,9 @@ var startCmd = &cobra.Command{
 	Long: `Prepara a inicializacao do simulador.jar.
 
 O comando localiza o simulador.jar nos caminhos esperados ou baixa o artefato
-para ~/.hubsaude/ quando uma URL for informada por --source.`,
+para ~/.hubsaude/ quando uma URL for informada por --source.
+Quando o artefato nao existe localmente, o CLI tenta buscar a versao mais
+recente no GitHub Releases.`,
 	RunE: runStart,
 }
 
@@ -31,18 +37,28 @@ func init() {
 func runStart(cmd *cobra.Command, args []string) error {
 	jar, err := artifact.ResolveLocalJar()
 	if err != nil {
-		if startSource == "" {
-			return err
+		if startSource != "" {
+			jar, err = downloadJarFunc(startSource)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar baixado para %s\n", jar.Path)
+		} else {
+			jar, err = resolveJarFunc()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar baixado e verificado para %s\n", jar.Path)
 		}
-		jar, err = artifact.DownloadJar(startSource)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar baixado para %s\n", jar.Path)
 	} else {
 		fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar encontrado em %s\n", jar.Path)
 	}
 
+	state, err := startSimulatorFunc(jar.Path, startPort)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "simulador.jar iniciado em PID %d na porta %d\n", state.PID, state.Port)
 	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador start preparado para a porta %d\n", startPort)
 	return nil
 }

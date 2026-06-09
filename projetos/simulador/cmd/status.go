@@ -3,19 +3,23 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
 	"github.com/spf13/cobra"
 )
 
-var statusPort int
+var (
+	statusPort          int
+	statusSimulatorFunc = lifecycle.StatusSimulator
+)
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Consulta o status do simulador.jar",
 	Long: `Consulta o status da instancia registrada do simulador.jar.
 
-Esta estrutura inicial registra o comando no CLI. A consulta real de PID, porta e
-processo ativo sera implementada na historia de monitoramento do Simulador.`,
-	Run: runStatus,
+O comando usa o estado salvo em ~/.hubsaude e verifica se o processo registrado
+ainda esta ativo.`,
+	RunE: runStatus,
 }
 
 func init() {
@@ -23,6 +27,17 @@ func init() {
 	statusCmd.Flags().IntVar(&statusPort, "port", 8081, "Porta do Simulador do HubSaude")
 }
 
-func runStatus(cmd *cobra.Command, args []string) {
-	fmt.Fprintf(cmd.OutOrStdout(), "Comando simulador status registrado para a porta %d\n", statusPort)
+func runStatus(cmd *cobra.Command, args []string) error {
+	status, err := statusSimulatorFunc(statusPort)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout(), status.Message)
+	if status.State != nil {
+		fmt.Fprintf(cmd.OutOrStdout(), "PID: %d\n", status.State.PID)
+		fmt.Fprintf(cmd.OutOrStdout(), "Porta: %d\n", status.State.Port)
+		fmt.Fprintf(cmd.OutOrStdout(), "JAR: %s\n", status.State.JarPath)
+	}
+	return nil
 }
