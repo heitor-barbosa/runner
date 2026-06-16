@@ -1,4 +1,22 @@
 /tools/
 /projetos/assinador-java/target/
+/projetos/*/target/
 /projetos/assinador/assinador.jar
 /projetos/assinador/assinatura.exe
+# Common artifacts
+dist/
+bin/
+*.exe
+*.jar
+
+# IDE and OS
+.idea/
+.vscode/
+__pycache__/
+.DS_Store
+
+# Logs
+*.log
+
+# temporary
+*.tmp

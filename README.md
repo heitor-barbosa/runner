@@ -95,6 +95,21 @@ Até a Sprint 3, o projeto já entrega:
 - detecção e provisionamento automático de JDK 21;
 - testes Go, testes Java e integração CLI -> JAR/HTTP no CI.
 
+## 5.1. Qualidade, rastreabilidade e validação (Seção A)
+
+Este projeto segue os critérios da seção A com os seguintes artefatos:
+
+- Especificação única de requisitos: `docs/Especificacao/especificacao.md`
+- Referência estável ancorada em tag fixa: https://github.com/heitor-barbosa/runner/blob/v1.1.0/docs/Especificacao/especificacao.md
+- Decisões registradas em ADR: `docs/ADR/0001-architecture-and-ci-decisions.md`
+- Rastreabilidade entre requisito, PR/commit, código e testes: `docs/rastreabilidade.md`
+- Build e verificação reproduzíveis com um comando único:
+  - Linux/macOS: `./scripts/verify.sh`
+  - Windows PowerShell: `.\scripts\verify.ps1`
+- Pipeline CI multiplataforma em `.github/workflows/assinatura.yml`
+
+Esse conjunto garante que o projeto falha de forma clara, possui documentação de decisões e mantém a especificação como fonte única de verdade.
+
 Na Sprint 4, o projeto entrega:
 
 - implementação real do ciclo de vida do CLI `simulador`;
