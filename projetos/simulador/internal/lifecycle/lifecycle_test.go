@@ -39,6 +39,43 @@ func TestIsPortAvailableReturnsFalseWhenOccupied(t *testing.T) {
 	}
 }
 
+func TestStartSimulatorRejectsOccupiedPortBeforeStartingProcess(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to open test listener: %v", err)
+	}
+	defer listener.Close()
+
+	tmpHome := t.TempDir()
+	oldHome := userHomeDir
+	oldCommand := newCommand
+	var commandStarted bool
+	userHomeDir = func() (string, error) { return tmpHome, nil }
+	newCommand = func(name string, arg ...string) *exec.Cmd {
+		commandStarted = true
+		return fakeCommand(name, arg...)
+	}
+	defer func() {
+		userHomeDir = oldHome
+		newCommand = oldCommand
+	}()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	_, err = StartSimulator("/tmp/simulador.jar", port)
+	if err == nil {
+		t.Fatal("expected StartSimulator to reject occupied port")
+	}
+	if !strings.Contains(err.Error(), "porta") || !strings.Contains(err.Error(), "indisponivel") {
+		t.Fatalf("error = %q, want clear occupied-port message", err)
+	}
+	if commandStarted {
+		t.Fatal("expected StartSimulator to fail before starting process")
+	}
+	if _, err := os.Stat(simulatorStatePath(port)); !os.IsNotExist(err) {
+		t.Fatalf("expected no state file for rejected start, stat error = %v", err)
+	}
+}
+
 func TestWriteSimulatorStateCreatesStateFile(t *testing.T) {
 	tmpHome := t.TempDir()
 	oldHome := userHomeDir
@@ -157,34 +194,51 @@ func TestStatusSimulatorReportsMissingStateAsInactive(t *testing.T) {
 func TestStopSimulatorKillsProcessAndRemovesState(t *testing.T) {
 	tmpHome := t.TempDir()
 	oldHome := userHomeDir
-	oldCommand := newCommand
+	oldFindProcess := findProcess
+	oldKillProcess := killProcess
 	userHomeDir = func() (string, error) { return tmpHome, nil }
-	newCommand = fakeCommand
 	defer func() {
 		userHomeDir = oldHome
-		newCommand = oldCommand
+		findProcess = oldFindProcess
+		killProcess = oldKillProcess
 	}()
 
-	state, err := StartSimulator("/tmp/simulador.jar", 8085)
-	if err != nil {
-		t.Fatalf("expected StartSimulator to succeed, got %v", err)
+	state := &SimulatorState{
+		PID:       4321,
+		Port:      8085,
+		JarPath:   "/tmp/simulador.jar",
+		StartedAt: time.Now().UTC(),
 	}
-	defer func() {
-		proc, err := os.FindProcess(state.PID)
-		if err == nil {
-			_ = proc.Kill()
-		}
-	}()
+	if err := writeSimulatorState(state); err != nil {
+		t.Fatalf("expected writeSimulatorState to succeed, got %v", err)
+	}
 
-	stopped, err := StopSimulator(8085)
+	var foundPID int
+	var killedPID int
+	findProcess = func(pid int) (*os.Process, error) {
+		foundPID = pid
+		return &os.Process{Pid: pid}, nil
+	}
+	killProcess = func(process *os.Process) error {
+		killedPID = process.Pid
+		return nil
+	}
+
+	stopped, err := StopSimulator(state.Port)
 	if err != nil {
 		t.Fatalf("expected StopSimulator to succeed, got %v", err)
+	}
+	if foundPID != state.PID {
+		t.Fatalf("findProcess PID = %d, want %d", foundPID, state.PID)
+	}
+	if killedPID != state.PID {
+		t.Fatalf("killProcess PID = %d, want %d", killedPID, state.PID)
 	}
 	if stopped.PID != state.PID {
 		t.Fatalf("expected stopped PID %d, got %d", state.PID, stopped.PID)
 	}
 
-	if _, err := os.Stat(simulatorStatePath(8085)); !os.IsNotExist(err) {
+	if _, err := os.Stat(simulatorStatePath(state.Port)); !os.IsNotExist(err) {
 		t.Fatalf("expected state file to be removed, got %v", err)
 	}
 }
