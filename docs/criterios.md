@@ -12,11 +12,12 @@ Este checklist serve para verificar se o projeto atende aos critérios fornecido
 
 ## B. Organização do repositório
 
-- [ ] Estrutura coerente com projeto multi-módulo (CLI + JAR)
-- [ ] `.gitignore` adequado para stack e sem artefatos versionados
-- [ ] `LICENSE` presente e compatível com dependências
-- [ ] Sem documentos de especificação genéricos; documentação específica da implementação
-- [ ] Nomenclatura consistente em idioma, sem acentos, espaços ou misturas inconsistentes
+- [x] Estrutura coerente com projeto multi-módulo (CLI + JAR)
+- [x] `.gitignore` adequado para stack e sem artefatos versionados (corrigido)
+- [x] `LICENSE` presente e compatível com dependências
+- [x] Sem documentos de especificação genéricos; documentação específica da implementação
+- [x] Nomenclatura consistente em idioma, sem acentos, espaços ou misturas inconsistentes
+
 
 ## C. Documentação
 
