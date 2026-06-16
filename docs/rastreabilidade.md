@@ -14,6 +14,7 @@ Este documento registra a cadeia de rastreabilidade usada pelo projeto Runner:
 - `docs/StatusSprints/StatusSprint1.md`
 - `docs/StatusSprints/StatusSprint2.md`
 - `docs/StatusSprints/StatusSprint3.md`
+- `docs/StatusSprints/StatusSprint4.md`
 
 ## PRs e commits relevantes
 
