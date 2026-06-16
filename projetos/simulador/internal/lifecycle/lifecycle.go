@@ -18,6 +18,7 @@ const defaultPort = 8081
 var userHomeDir = os.UserHomeDir
 var newCommand = exec.Command
 var findProcess = os.FindProcess
+var killProcess = func(process *os.Process) error { return process.Kill() }
 var processActive = defaultProcessActive
 
 // SimulatorState representa o estado do simulador iniciado pelo CLI.
@@ -68,7 +69,7 @@ func StartSimulator(jarPath string, port int) (*SimulatorState, error) {
 	}
 
 	if err := writeSimulatorState(state); err != nil {
-		_ = cmd.Process.Kill()
+		_ = killProcess(cmd.Process)
 		return nil, err
 	}
 
@@ -119,7 +120,7 @@ func StopSimulator(port int) (*SimulatorState, error) {
 		return nil, fmt.Errorf("falha ao localizar processo do simulador (PID %d): %w", state.PID, err)
 	}
 
-	if err := process.Kill(); err != nil {
+	if err := killProcess(process); err != nil {
 		_ = removeSimulatorState(state.Port)
 		return nil, fmt.Errorf("falha ao encerrar simulador (PID %d): %w", state.PID, err)
 	}
