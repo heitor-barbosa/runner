@@ -1,12 +1,32 @@
 $ErrorActionPreference = 'Stop'
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location (Join-Path $scriptPath '..')
+$repoRoot = Resolve-Path (Join-Path $scriptPath '..')
 
-Write-Host '=== Running Go tests ==='
-go test .\projetos\assinador\... .\projetos\simulador\...
+Write-Host '=== Running Go tests: assinatura ==='
+Push-Location (Join-Path $repoRoot 'projetos\assinador')
+try {
+    go test ./...
+}
+finally {
+    Pop-Location
+}
+
+Write-Host '=== Running Go tests: simulador ==='
+Push-Location (Join-Path $repoRoot 'projetos\simulador')
+try {
+    go test ./...
+}
+finally {
+    Pop-Location
+}
 
 Write-Host '=== Running Java tests and packaging assinador.jar ==='
-Set-Location .\projetos\assinador-java
-mvn --batch-mode clean verify
+Push-Location (Join-Path $repoRoot 'projetos\assinador-java')
+try {
+    mvn --batch-mode clean verify
+}
+finally {
+    Pop-Location
+}
 
 Write-Host '=== Verification complete ==='
