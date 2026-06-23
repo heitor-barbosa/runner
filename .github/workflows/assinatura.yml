@@ -156,6 +156,30 @@ jobs:
             --signature-data "${signature_data}" \
             --timestamp "${timestamp}"
 
+      - name: Exercise HTTP shutdown endpoint
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          set -euo pipefail
+
+          go run . start --port 18081
+          sleep 1
+
+          shutdown_response="$(curl -X DELETE http://127.0.0.1:18081/shutdown 2>/dev/null || true)"
+          if echo "${shutdown_response}" | grep -q '"success":true'; then
+            echo "Shutdown endpoint works correctly"
+          else
+            echo "Shutdown endpoint test failed"
+            exit 1
+          fi
+
+          sleep 1
+          if ! curl http://127.0.0.1:18081/health 2>/dev/null; then
+            echo "Server successfully shut down"
+          else
+            echo "Server should have shut down"
+            exit 1
+          fi
+
   build:
     name: Build ${{ matrix.app_name }} ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
