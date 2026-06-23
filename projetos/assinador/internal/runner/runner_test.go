@@ -214,7 +214,12 @@ func TestStopServerReturnsErrorWhenNoStateExists(t *testing.T) {
 
 func TestConcurrentStartServerOnSamePortHandlesRaceCondition(t *testing.T) {
 	useTempHome(t)
-	port := 22080
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen returned error: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
 
 	const goroutines = 3
 	var mu sync.Mutex
@@ -236,7 +241,7 @@ func TestConcurrentStartServerOnSamePortHandlesRaceCondition(t *testing.T) {
 		}()
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	mu.Lock()
 	if reuseCount+errCount < 2 {
