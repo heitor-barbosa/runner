@@ -222,12 +222,16 @@ func TestConcurrentStartServerOnSamePortHandlesRaceCondition(t *testing.T) {
 	listener.Close()
 
 	const goroutines = 3
+	var wg sync.WaitGroup
 	var mu sync.Mutex
 	reuseCount := 0
 	errCount := 0
 
+	wg.Add(goroutines)
+
 	for i := 0; i < goroutines; i++ {
 		go func() {
+			defer wg.Done()
 			state, err := StartServer(port, 0)
 			mu.Lock()
 			defer mu.Unlock()
@@ -241,7 +245,7 @@ func TestConcurrentStartServerOnSamePortHandlesRaceCondition(t *testing.T) {
 		}()
 	}
 
-	time.Sleep(3 * time.Second)
+	wg.Wait()
 
 	mu.Lock()
 	if reuseCount+errCount < 2 {
