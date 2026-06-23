@@ -136,6 +136,29 @@ public class AssinadorHttpServer implements AutoCloseable {
                 output.write(payload);
             }
         });
+        server.createContext("/shutdown", exchange -> {
+            if (!"DELETE".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().add("Allow", "DELETE");
+                byte[] error = new ObjectMapper().writeValueAsBytes(AssinadorResponse.error(
+                        "HTTP.METHOD-NOT-ALLOWED",
+                        "Metodo nao permitido. Use DELETE."
+                ));
+                exchange.getResponseHeaders().set("Content-Type", CONTENT_TYPE_JSON);
+                exchange.sendResponseHeaders(405, error.length);
+                try (OutputStream output = exchange.getResponseBody()) {
+                    output.write(error);
+                }
+                return;
+            }
+
+            byte[] payload = new ObjectMapper().writeValueAsBytes(AssinadorResponse.ok("SHUTDOWN.OK"));
+            exchange.getResponseHeaders().set("Content-Type", CONTENT_TYPE_JSON);
+            exchange.sendResponseHeaders(200, payload.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(payload);
+            }
+            assinadorServer.stop();
+        });
         server.setExecutor(executor);
 
         return assinadorServer;

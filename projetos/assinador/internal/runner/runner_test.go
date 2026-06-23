@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -208,6 +209,54 @@ func TestStopServerReturnsErrorWhenNoStateExists(t *testing.T) {
 
 	if _, err := StopServer(19180); err == nil {
 		t.Fatal("expected StopServer to fail without registered state")
+	}
+}
+
+func TestConcurrentStartServerOnSamePortHandlesRaceCondition(t *testing.T) {
+	useTempHome(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen returned error: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	const goroutines = 3
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	reuseCount := 0
+	errCount := 0
+
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			state, err := StartServer(port, 0)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errCount++
+				return
+			}
+			if state.Reused {
+				reuseCount++
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	mu.Lock()
+	if reuseCount+errCount < 2 {
+		t.Fatalf("expected at least 2 goroutines to reuse or error, got reuseCount=%d errCount=%d", reuseCount, errCount)
+	}
+	mu.Unlock()
+
+	if state, err := readServerState(port); err == nil {
+		if state.PID > 0 {
+			StopServer(port)
+		}
 	}
 }
 

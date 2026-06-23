@@ -66,9 +66,9 @@ priorizam saida direta e mensagens de erro orientativas.
 - [x] Modo local explicito por `--local`.
 - [x] Auto-shutdown por inatividade implementado.
 - [x] Integracao HTTP real exercitada no CI.
-- [ ] Shutdown controlado por endpoint HTTP.
-- [ ] Teste especifico para reinicio do timer de inatividade.
-- [ ] Teste especifico para race condition em starts simultaneos.
+- [x] Shutdown controlado por endpoint HTTP.
+- [x] Teste especifico para reinicio do timer de inatividade.
+- [x] Teste especifico para race condition em starts simultaneos.
 
 ### E3. Validacao de parametros
 
