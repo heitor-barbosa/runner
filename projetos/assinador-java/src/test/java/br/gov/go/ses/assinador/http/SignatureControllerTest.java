@@ -129,6 +129,48 @@ class SignatureControllerTest {
     }
 
     @Test
+    void shutdownShouldTerminateServerWithDelete() throws Exception {
+        HttpResponse<String> response = delete("/shutdown");
+        JsonNode body = mapper.readTree(response.body());
+
+        assertEquals(200, response.statusCode());
+        assertTrue(body.get("success").asBoolean());
+        assertEquals("SHUTDOWN.OK", body.get("data").asText());
+
+        Thread.sleep(100);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/health"))
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        try {
+            client.send(request, HttpResponse.BodyHandlers.ofString());
+            assertTrue(false, "Server should not respond after shutdown");
+        } catch (Exception e) {
+            assertTrue(true, "Server is down as expected");
+        }
+    }
+
+    @Test
+    void shutdownShouldRejectNonDeleteMethod() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/shutdown"))
+                .timeout(Duration.ofSeconds(5))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonNode body = mapper.readTree(response.body());
+
+        assertEquals(405, response.statusCode());
+        assertEquals("DELETE", response.headers().firstValue("Allow").orElse(""));
+        assertFalse(body.get("success").asBoolean());
+        assertEquals("HTTP.METHOD-NOT-ALLOWED", body.get("errorCode").asText());
+    }
+
+    @Test
     void idleTimeoutShouldRestartAfterEachRequest() throws Exception {
         server.stop();
 
@@ -152,6 +194,15 @@ class SignatureControllerTest {
                 .timeout(Duration.ofSeconds(5))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(payload)))
+                .build();
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> delete(String path) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + path))
+                .timeout(Duration.ofSeconds(5))
+                .DELETE()
                 .build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }

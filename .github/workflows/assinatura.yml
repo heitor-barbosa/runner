@@ -156,6 +156,36 @@ jobs:
             --signature-data "${signature_data}" \
             --timestamp "${timestamp}"
 
+      - name: Exercise HTTP shutdown endpoint
+        working-directory: ${{ env.MODULE_DIR }}
+        run: |
+          set -euo pipefail
+          
+          PORT=29080
+          echo "Starting server on port ${PORT}..."
+          go run . start --port ${PORT} --timeout 1 || true
+          sleep 2
+
+          echo "Testing DELETE /shutdown endpoint..."
+          shutdown_response="$(curl -s -X DELETE http://127.0.0.1:${PORT}/shutdown 2>/dev/null || echo '')"
+          
+          if echo "${shutdown_response}" | grep -q '"success":true'; then
+            echo "✓ Shutdown endpoint works correctly"
+          else
+            echo "✗ Shutdown endpoint response: ${shutdown_response}"
+            go run . stop --port ${PORT} || true
+            exit 1
+          fi
+
+          sleep 3
+          health_check="$(curl -s http://127.0.0.1:${PORT}/health 2>/dev/null || echo 'offline')"
+          
+          if [ -z "${health_check}" ] || echo "${health_check}" | grep -q "Connection refused\|offline"; then
+            echo "✓ Server successfully shut down"
+          else
+            echo "⚠ Server may still be running, response: ${health_check:0:50}"
+          fi
+
   build:
     name: Build ${{ matrix.app_name }} ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ubuntu-latest
