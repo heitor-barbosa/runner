@@ -84,7 +84,9 @@ priorizam saida direta e mensagens de erro orientativas.
 - [x] Estado salvo em `~/.hubsaude/`.
 - [x] Download/cache do `simulador.jar` implementado.
 - [x] Fluxo padrao por release valida checksum SHA-256 e Cosign.
-- [ ] Readiness real do `simulador.jar` apos start.
+- [x] Readiness TCP aguarda a abertura da porta apos o start.
+- [x] Falha de readiness encerra o processo e remove o estado local.
+- [ ] Readiness HTTP real do `simulador.jar` apos start.
 - [ ] Verificacao completa de checksum/Cosign para URL alternativa via `--source`.
 
 ### E5. PKCS#11
