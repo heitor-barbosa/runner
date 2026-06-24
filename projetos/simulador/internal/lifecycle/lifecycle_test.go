@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,6 +64,20 @@ func fakeCommand(name string, arg ...string) *exec.Cmd {
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
 	return cmd
+}
+
+func availablePort(t *testing.T) int {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to find available port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatalf("failed to release available port: %v", err)
+	}
+	return port
 }
 
 func TestIsPortAvailableReturnsFalseWhenOccupied(t *testing.T) {
@@ -147,16 +162,38 @@ func TestStartSimulatorWritesStateAndStartsCommand(t *testing.T) {
 	oldHome := userHomeDir
 	oldCommand := newCommand
 	userHomeDir = func() (string, error) { return tmpHome, nil }
-	newCommand = fakeCommand
+	newCommand = func(name string, arg ...string) *exec.Cmd {
+		return fakeCommand(name)
+	}
 	defer func() {
 		userHomeDir = oldHome
 		newCommand = oldCommand
 	}()
 
-	state, err := StartSimulator("/tmp/simulador.jar", 8082)
+	port := availablePort(t)
+	readyCh := make(chan net.Listener, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			errCh <- err
+			return
+		}
+		readyCh <- listener
+	}()
+
+	state, err := StartSimulator("/tmp/simulador.jar", port)
 	if err != nil {
+		select {
+		case listenerErr := <-errCh:
+			t.Fatalf("failed to open simulator test listener: %v", listenerErr)
+		default:
+		}
 		t.Fatalf("expected StartSimulator to succeed, got %v", err)
 	}
+	listener := <-readyCh
+	defer listener.Close()
 	defer func() {
 		proc, err := os.FindProcess(state.PID)
 		if err == nil {
@@ -174,8 +211,8 @@ func TestStartSimulatorWritesStateAndStartsCommand(t *testing.T) {
 		t.Fatalf("failed to read state file: %v", err)
 	}
 
-	if !strings.Contains(string(content), "\"port\": 8082") {
-		t.Fatalf("expected state file to contain port 8082, got %s", content)
+	if !strings.Contains(string(content), fmt.Sprintf("\"port\": %d", port)) {
+		t.Fatalf("expected state file to contain port %d, got %s", port, content)
 	}
 }
 
@@ -217,6 +254,66 @@ func TestWaitForSimulatorReadyReturnsAfterPortIsOpen(t *testing.T) {
 
 	ln := <-readyCh
 	defer ln.Close()
+}
+
+func TestWaitForSimulatorReadyReturnsErrorAfterTimeout(t *testing.T) {
+	port := availablePort(t)
+	timeout := 150 * time.Millisecond
+
+	start := time.Now()
+	err := waitForSimulatorReady(port, timeout)
+	if err == nil {
+		t.Fatal("expected waitForSimulatorReady to fail after timeout")
+	}
+	if !strings.Contains(err.Error(), strconv.Itoa(port)) || !strings.Contains(err.Error(), "nao ficou pronto") {
+		t.Fatalf("error = %q, want clear readiness timeout message", err)
+	}
+	if elapsed := time.Since(start); elapsed < timeout {
+		t.Fatalf("expected waitForSimulatorReady to respect timeout, elapsed %s", elapsed)
+	}
+}
+
+func TestStartSimulatorRemovesStateAndKillsProcessWhenReadinessFails(t *testing.T) {
+	tmpHome := t.TempDir()
+	oldHome := userHomeDir
+	oldCommand := newCommand
+	oldKillProcess := killProcess
+	oldReadyTimeout := simulatorReadyTimeout
+	userHomeDir = func() (string, error) { return tmpHome, nil }
+	newCommand = func(name string, arg ...string) *exec.Cmd {
+		return fakeCommand(name)
+	}
+	simulatorReadyTimeout = 150 * time.Millisecond
+
+	var killedPID int
+	killProcess = func(process *os.Process) error {
+		killedPID = process.Pid
+		return process.Kill()
+	}
+	defer func() {
+		userHomeDir = oldHome
+		newCommand = oldCommand
+		killProcess = oldKillProcess
+		simulatorReadyTimeout = oldReadyTimeout
+	}()
+
+	port := availablePort(t)
+	state, err := StartSimulator("/tmp/simulador.jar", port)
+	if err == nil {
+		if state != nil {
+			_ = killProcess(&os.Process{Pid: state.PID})
+		}
+		t.Fatal("expected StartSimulator to fail when simulator does not become ready")
+	}
+	if !strings.Contains(err.Error(), "nao ficou pronto") {
+		t.Fatalf("error = %q, want readiness failure", err)
+	}
+	if killedPID == 0 {
+		t.Fatal("expected failed simulator process to be killed")
+	}
+	if _, err := os.Stat(simulatorStatePath(port)); !os.IsNotExist(err) {
+		t.Fatalf("expected state file to be removed after readiness failure, got %v", err)
+	}
 }
 
 func TestStatusSimulatorReportsActiveProcess(t *testing.T) {
