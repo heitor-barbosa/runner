@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +29,7 @@ func init() {
 }
 
 func runStop(cmd *cobra.Command, args []string) error {
+	logging.Debugf("iniciando simulador stop na porta %d", stopPort)
 	state, err := stopSimulatorFunc(stopPort)
 	if err != nil {
 		return err

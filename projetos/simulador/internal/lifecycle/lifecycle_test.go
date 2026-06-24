@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -14,7 +15,45 @@ func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}
-	// Keep the helper process alive until killed by the test.
+
+	args := os.Args[1:]
+	for i, arg := range args {
+		if arg == "--" {
+			args = args[i+1:]
+			break
+		}
+	}
+
+	var port string
+	var delay time.Duration
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--port":
+			if i+1 < len(args) {
+				port = args[i+1]
+			}
+		case "--listen-after":
+			if i+1 < len(args) {
+				d, err := time.ParseDuration(args[i+1])
+				if err == nil {
+					delay = d
+				}
+			}
+		}
+	}
+
+	if port != "" {
+		if delay > 0 {
+			time.Sleep(delay)
+		}
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%s", port))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to listen: %v\n", err)
+			os.Exit(1)
+		}
+		defer ln.Close()
+	}
+
 	select {}
 }
 
@@ -138,6 +177,46 @@ func TestStartSimulatorWritesStateAndStartsCommand(t *testing.T) {
 	if !strings.Contains(string(content), "\"port\": 8082") {
 		t.Fatalf("expected state file to contain port 8082, got %s", content)
 	}
+}
+
+func TestWaitForSimulatorReadyReturnsAfterPortIsOpen(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen on ephemeral port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatalf("failed to close initial listener: %v", err)
+	}
+
+	readyCh := make(chan net.Listener, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			errCh <- err
+			return
+		}
+		readyCh <- ln
+	}()
+
+	start := time.Now()
+	if err := waitForSimulatorReady(port, 2*time.Second); err != nil {
+		select {
+		case err := <-errCh:
+			t.Fatalf("failed to open port listener: %v", err)
+		default:
+			t.Fatalf("expected waitForSimulatorReady to succeed, got %v", err)
+		}
+	}
+	elapsed := time.Since(start)
+	if elapsed < 100*time.Millisecond {
+		t.Fatalf("expected waitForSimulatorReady to wait for readiness, elapsed %s", elapsed)
+	}
+
+	ln := <-readyCh
+	defer ln.Close()
 }
 
 func TestStatusSimulatorReportsActiveProcess(t *testing.T) {

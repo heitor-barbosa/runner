@@ -3,6 +3,9 @@ package cmd
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/artifact"
@@ -61,6 +64,59 @@ func TestRunStartUsesSourceURLWhenLocalJarMissing(t *testing.T) {
 
 	got := output.String()
 	if got != "simulador.jar baixado para /tmp/.hubsaude/simulador.jar\nsimulador.jar iniciado em PID 1234 na porta 8081\nComando simulador start preparado para a porta 8081\n" {
+		t.Fatalf("unexpected output: %q", got)
+	}
+}
+
+func TestRunStartUsesLocalJarWhenAvailable(t *testing.T) {
+	oldStartSource := startSource
+	oldStartPort := startPort
+	oldStartSimulator := startSimulatorFunc
+	defer func() {
+		startSource = oldStartSource
+		startPort = oldStartPort
+		startSimulatorFunc = oldStartSimulator
+	}()
+
+	tmpDir := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get current working directory: %v", err)
+	}
+	defer func() {
+		_ = os.Chdir(oldWd)
+	}()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("failed to change working directory: %v", err)
+	}
+
+	localJarPath := filepath.Join(tmpDir, "simulador.jar")
+	if err := os.WriteFile(localJarPath, []byte("dummy"), 0o600); err != nil {
+		t.Fatalf("failed to create local jar: %v", err)
+	}
+
+	startSource = ""
+	startPort = 8081
+	startSimulatorFunc = func(jarPath string, port int) (*lifecycle.SimulatorState, error) {
+		if jarPath != localJarPath {
+			return nil, errors.New("unexpected jar path")
+		}
+		if port != 8081 {
+			return nil, errors.New("unexpected port")
+		}
+		return &lifecycle.SimulatorState{PID: 1234, Port: port, JarPath: jarPath}, nil
+	}
+
+	var output bytes.Buffer
+	cmd := &cobra.Command{}
+	cmd.SetOut(&output)
+
+	if err := runStart(cmd, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := fmt.Sprintf("simulador.jar encontrado em %s\nsimulador.jar iniciado em PID 1234 na porta 8081\nComando simulador start preparado para a porta 8081\n", localJarPath)
+	if got := output.String(); got != want {
 		t.Fatalf("unexpected output: %q", got)
 	}
 }
