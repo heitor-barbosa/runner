@@ -69,6 +69,8 @@ O CLI `simulador`:
 
 - inicia o `simulador.jar` com `simulador start`;
 - verifica disponibilidade de porta antes de iniciar;
+- aguarda por ate 10 segundos o processo abrir a porta configurada;
+- encerra o processo e remove o estado local se a inicializacao nao ficar pronta;
 - registra PID, porta e caminho do JAR em `~/.hubsaude/`;
 - consulta o estado com `simulador status`;
 - encerra o processo registrado com `simulador stop`;
@@ -208,6 +210,10 @@ simulador status --port 8081
 simulador stop --port 8081
 ```
 
+O comando `simulador start` so confirma a inicializacao depois que o processo
+abre a porta configurada. Se isso nao ocorrer em ate 10 segundos, o processo e
+encerrado, o arquivo de estado e removido e o comando retorna um erro.
+
 Para uso via release, o usuario precisa baixar o binario da sua plataforma e o
 JAR correspondente, mantendo ambos na mesma pasta quando aplicavel.
 
@@ -227,8 +233,8 @@ O fluxo esperado de contribuicao e:
   validacao de parametros e gestao de execucao.
 - A integracao PKCS#11 e simulada nos testes versionados; execucao com SoftHSM2
   real pode ser adicionada como reforco futuro.
-- O `simulador start` registra o processo iniciado, mas ainda nao aguarda um
-  endpoint real de readiness do `simulador.jar`.
+- O `simulador start` confirma readiness TCP pela abertura da porta, mas ainda
+  nao valida um endpoint HTTP especifico do `simulador.jar`.
 - O fluxo `simulador start --source` baixa uma URL alternativa diretamente; a
   verificacao completa de checksum e Cosign esta no fluxo padrao por GitHub
   Releases.

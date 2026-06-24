@@ -12,12 +12,13 @@ O estado real atual e: o projeto Go `projetos/simulador` existe, os comandos
 `start`, `stop` e `status` estao implementados, o JAR pode ser resolvido por
 arquivo local, cache em `~/.hubsaude/` ou GitHub Releases, e o fluxo de release
 inclui binarios do `simulador` junto aos artefatos verificaveis por SHA-256 e
-Cosign.
+Cosign. A inicializacao aguarda por ate 10 segundos a abertura da porta e
+encerra o processo e remove o estado local quando o simulador nao fica pronto.
 
 Ainda ha pontos que podem ser reforcados fora do escopo principal desta sprint:
 teste end-to-end com um `simulador.jar` real respondendo a health/readiness,
-validacao de prontidao apos o start e verificacao por checksum/Cosign tambem
-para URLs alternativas informadas por `--source`.
+validacao HTTP de prontidao apos o start e verificacao por checksum/Cosign
+tambem para URLs alternativas informadas por `--source`.
 
 ## Historias concluidas
 
@@ -27,6 +28,8 @@ para URLs alternativas informadas por `--source`.
 - [x] O comando resolve o `simulador.jar` localmente ou baixa o artefato quando necessario.
 - [x] A porta e validada antes da inicializacao.
 - [x] O processo e iniciado em background via `java -jar`.
+- [x] O comando aguarda por ate 10 segundos a abertura da porta configurada.
+- [x] Falha de readiness encerra o processo e remove o estado local.
 - [x] PID, porta, caminho do JAR e data de inicio sao registrados em `~/.hubsaude/`.
 - [x] Feedback e exibido ao usuario apos a inicializacao.
 
@@ -109,8 +112,8 @@ go run . stop --port 8081
 
 ## Limitacoes conhecidas
 
-- O start registra o processo iniciado, mas ainda nao aguarda um endpoint real
-  de readiness do `simulador.jar`.
+- O start aguarda readiness TCP pela abertura da porta, mas ainda nao valida um
+  endpoint HTTP especifico do `simulador.jar`.
 - O fluxo `--source` baixa uma URL alternativa diretamente; a verificacao
   completa de checksum e Cosign esta no fluxo padrao por GitHub Releases.
 - O `simulador.jar` em si nao faz parte do escopo de desenvolvimento deste

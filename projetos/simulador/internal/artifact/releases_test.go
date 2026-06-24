@@ -12,6 +12,22 @@ import (
 	"testing"
 )
 
+func assertSameFile(t *testing.T, expectedPath string, actualPath string) {
+	t.Helper()
+
+	expectedInfo, err := os.Stat(expectedPath)
+	if err != nil {
+		t.Fatalf("failed to stat expected file %s: %v", expectedPath, err)
+	}
+	actualInfo, err := os.Stat(actualPath)
+	if err != nil {
+		t.Fatalf("failed to stat actual file %s: %v", actualPath, err)
+	}
+	if !os.SameFile(expectedInfo, actualInfo) {
+		t.Fatalf("expected %s and %s to identify the same file", expectedPath, actualPath)
+	}
+}
+
 func TestFindSimuladorJarAsset(t *testing.T) {
 	release := &GitHubRelease{
 		TagName: "v1.0.0",
@@ -253,9 +269,7 @@ func TestResolveLocalJarFindsJarInWorkingDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected ResolveLocalJar to succeed, got %v", err)
 	}
-	if jar.Path != localPath {
-		t.Fatalf("expected path %s, got %s", localPath, jar.Path)
-	}
+	assertSameFile(t, localPath, jar.Path)
 }
 
 func TestResolveJarWithFallbackUsesLocalJarWhenAvailable(t *testing.T) {
@@ -288,9 +302,7 @@ func TestResolveJarWithFallbackUsesLocalJarWhenAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected ResolveJarWithFallback to succeed, got %v", err)
 	}
-	if jar.Path != localPath {
-		t.Fatalf("expected path %s, got %s", localPath, jar.Path)
-	}
+	assertSameFile(t, localPath, jar.Path)
 }
 
 func TestResolveJarWithFallbackDownloadsWhenLocalJarMissing(t *testing.T) {

@@ -20,6 +20,7 @@ var newCommand = exec.Command
 var findProcess = os.FindProcess
 var killProcess = func(process *os.Process) error { return process.Kill() }
 var processActive = defaultProcessActive
+var simulatorReadyTimeout = 10 * time.Second
 
 // SimulatorState representa o estado do simulador iniciado pelo CLI.
 type SimulatorState struct {
@@ -70,6 +71,12 @@ func StartSimulator(jarPath string, port int) (*SimulatorState, error) {
 
 	if err := writeSimulatorState(state); err != nil {
 		_ = killProcess(cmd.Process)
+		return nil, err
+	}
+
+	if err := waitForSimulatorReady(port, simulatorReadyTimeout); err != nil {
+		_ = killProcess(cmd.Process)
+		_ = removeSimulatorState(port)
 		return nil, err
 	}
 
@@ -145,6 +152,33 @@ func isPortAvailable(port int) bool {
 	}
 	_ = listener.Close()
 	return true
+}
+
+func waitForSimulatorReady(port int, timeout time.Duration) error {
+	port = normalizePort(port)
+	address := fmt.Sprintf("127.0.0.1:%d", port)
+	deadline := time.Now().Add(timeout)
+
+	for {
+		connection, err := net.DialTimeout("tcp", address, 200*time.Millisecond)
+		if err == nil {
+			_ = connection.Close()
+			return nil
+		}
+
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+
+		delay := 100 * time.Millisecond
+		if remaining < delay {
+			delay = remaining
+		}
+		time.Sleep(delay)
+	}
+
+	return fmt.Errorf("simulador.jar nao ficou pronto na porta %d em %s", port, timeout)
 }
 
 func writeSimulatorState(state *SimulatorState) error {
