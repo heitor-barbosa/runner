@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/heitor-barbosa/runner/projetos/assinador/internal/logging"
 	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,7 @@ func init() {
 }
 
 func runStop(cmd *cobra.Command, args []string) error {
+	logging.Debugf("iniciando assinador stop na porta %d", stopPort)
 	state, err := runner.StopServer(stopPort)
 	if err != nil {
 		return err
