@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/heitor-barbosa/runner/projetos/assinador/internal/logging"
 	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +49,7 @@ func init() {
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {
+	logging.Debugf("iniciando validate com local=%v port=%d", validateLocal, validatePort)
 	payload := map[string]interface{}{
 		"signatureData":      validateSignatureData,
 		"referenceTimestamp": validateTimestamp,

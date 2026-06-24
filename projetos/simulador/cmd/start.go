@@ -5,6 +5,7 @@ import (
 
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/artifact"
 	"github.com/heitor-barbosa/runner/projetos/simulador/internal/lifecycle"
+	"github.com/heitor-barbosa/runner/projetos/simulador/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +36,7 @@ func init() {
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
+	logging.Debugf("iniciando simulador start na porta %d source=%q", startPort, startSource)
 	jar, err := artifact.ResolveLocalJar()
 	if err != nil {
 		if startSource != "" {

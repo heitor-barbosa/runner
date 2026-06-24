@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/heitor-barbosa/runner/projetos/assinador/internal/logging"
 	"github.com/heitor-barbosa/runner/projetos/assinador/internal/runner"
 	"github.com/spf13/cobra"
 )
@@ -75,6 +76,7 @@ func init() {
 }
 
 func runSign(cmd *cobra.Command, args []string) error {
+	logging.Debugf("iniciando sign com local=%v port=%d sourcePKCS11=%t", signLocal, signPort, signPKCS11Config != "")
 	// Monta payload para o assinador.jar
 	payload := map[string]interface{}{
 		"bundle":             signBundle,
