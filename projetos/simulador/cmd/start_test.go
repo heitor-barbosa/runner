@@ -97,13 +97,23 @@ func TestRunStartUsesLocalJarWhenAvailable(t *testing.T) {
 
 	startSource = ""
 	startPort = 8081
+	var resolvedJarPath string
 	startSimulatorFunc = func(jarPath string, port int) (*lifecycle.SimulatorState, error) {
-		if jarPath != localJarPath {
-			return nil, errors.New("unexpected jar path")
+		expectedInfo, err := os.Stat(localJarPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat expected jar: %w", err)
+		}
+		actualInfo, err := os.Stat(jarPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat resolved jar: %w", err)
+		}
+		if !os.SameFile(expectedInfo, actualInfo) {
+			return nil, fmt.Errorf("resolved jar %s is not expected jar %s", jarPath, localJarPath)
 		}
 		if port != 8081 {
 			return nil, errors.New("unexpected port")
 		}
+		resolvedJarPath = jarPath
 		return &lifecycle.SimulatorState{PID: 1234, Port: port, JarPath: jarPath}, nil
 	}
 
@@ -115,7 +125,7 @@ func TestRunStartUsesLocalJarWhenAvailable(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := fmt.Sprintf("simulador.jar encontrado em %s\nsimulador.jar iniciado em PID 1234 na porta 8081\nComando simulador start preparado para a porta 8081\n", localJarPath)
+	want := fmt.Sprintf("simulador.jar encontrado em %s\nsimulador.jar iniciado em PID 1234 na porta 8081\nComando simulador start preparado para a porta 8081\n", resolvedJarPath)
 	if got := output.String(); got != want {
 		t.Fatalf("unexpected output: %q", got)
 	}
